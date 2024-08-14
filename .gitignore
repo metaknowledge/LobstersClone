@@ -1,0 +1,3 @@
+server/target/
+server/shell.nix # look for rust nix.shell for nix shell build script
+server/Cargo.lock

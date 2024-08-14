@@ -1,0 +1,20 @@
+name = "poem-testing"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures = "0.3.30"
+poem = "3.0.4"
+poem-openapi = {version = "5.0.3", features = ["swagger-ui"]}
+serde = "1.0.206"
+sqlx = {version="0.8.0", features = ["postgres", "runtime-tokio-rustls", "macros"]}
+tokio = {version = "1.39.2", features = ["full"]}
+
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

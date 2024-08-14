@@ -1,0 +1,136 @@
+use poem::web::Data;
+use poem_openapi::param::{Path, Query};
+use poem_openapi::{payload::PlainText, OpenApi};
+use sqlx::postgres::PgQueryResult;
+use sqlx::{Pool, Postgres};
+use poem_openapi::payload::Json;
+use crate::users;
+use crate::posts;
+use crate::routes::{PostApiResponse, UserApiResponse, UserDeleteResponse, Info};
+pub struct PostsApi;
+
+#[OpenApi]
+impl PostsApi {
+
+    // get all posts
+    #[oai(path="/posts/all/", method="get")]
+    async fn get_all_posts(
+        &self,
+        pool: Data<&Pool<Postgres>>
+    ) -> PostApiResponse {
+        let posts = posts::read_all_posts(&pool).await.unwrap();        
+        PostApiResponse::Ok(Json(posts))
+    }
+
+    // get one post
+    #[oai(path="/post/:post_id", method="get")]
+    async fn get_post_from_id(
+        &self,
+        Path(post_id): Path<String>,
+        pool: Data<&Pool<Postgres>>,
+    ) -> PlainText<String> {
+        let post = posts::read_from_id(post_id.parse::<i32>().unwrap(), &pool).await.unwrap();        
+        PlainText(post.to_string())
+    }
+
+    // create post
+    #[oai(path="/post/", method="post")]
+    async fn post_post(
+        &self,
+        pool: Data<&Pool<Postgres>>,
+        Query(title): Query<Option<String>>,
+        Query(content): Query<Option<String>>,
+        Query(user_id): Query<i32>
+    ) -> PlainText<String> {
+        let _ = posts::create(title.unwrap(), content.unwrap(), user_id, &pool).await;
+        PlainText("hello".to_string())  
+    }
+
+    // delete post
+    #[oai(path="/post/:post_id", method="delete")]
+    async fn delete_post(
+        &self,
+        pool: Data<&Pool<Postgres>>,
+        Path(post_id): Path<i32>,
+    ) -> PlainText<String> {
+        let _ = posts::delete(post_id, &pool).await;        
+        PlainText("deleted".to_string())  
+    }
+
+    // update post
+    #[oai(path="/post/:post_id", method="put")]
+    async fn update_post(
+        &self,
+        pool: Data<&Pool<Postgres>>,
+        Path(post_id): Path<i32>,
+        Query(title): Query<Option<String>>,
+        Query(content): Query<Option<String>>,
+    ) -> PlainText<String> {
+        let _ = posts::update(title.unwrap(), content.unwrap(), post_id, &pool).await;        
+        PlainText("updated".to_string())  
+    }
+
+    // get all users
+    #[oai(path="/users/all/", method="get")]
+    async fn get_all_users(
+        &self,
+        pool: Data<&Pool<Postgres>>
+    ) -> UserApiResponse {
+        let users = users::read_all(&pool).await.unwrap();        
+        UserApiResponse::Ok(Json(users))
+    }
+
+    // get one user
+    #[oai(path="/user/:user_id", method="get")]
+    async fn get_user_from_id(
+        &self,
+        Path(user_id): Path<String>,
+        pool: Data<&Pool<Postgres>>,
+    ) -> PlainText<String> {
+        let user = users::read_from_id(user_id.parse::<i32>().unwrap(), &pool).await.unwrap();        
+        PlainText(user.to_string())
+    }
+
+    // create user
+    #[oai(path="/user/", method="post")]
+    async fn create_user(
+        &self,
+        pool: Data<&Pool<Postgres>>,
+        Query(username): Query<Option<String>>,
+        Query(email): Query<Option<String>>,
+    ) -> PlainText<String> {
+        let user_id = users::create(username.unwrap(), email.unwrap(), &pool).await;
+        PlainText(user_id.unwrap().to_string())
+    }
+
+    // update user
+    #[oai(path="/user/:user_id", method="put")]
+    async fn update_user(
+        &self,
+        pool: Data<&Pool<Postgres>>,
+        Path(user_id): Path<i32>,
+        Query(username): Query<Option<String>>,
+        Query(email): Query<Option<String>>,
+    ) -> PlainText<String> {
+        let result = users::update(username.unwrap(), email.unwrap(), user_id, &pool).await;        
+        match result {
+            Ok(_) => PlainText("updated".to_string()),  
+            Err(_) => PlainText("could not update".to_string()),
+        }
+    }
+
+    // delete user
+    #[oai(path="/user/:user_id", method="delete")]
+    async fn delete_user(
+        &self,
+        pool: Data<&Pool<Postgres>>,
+        Path(user_id): Path<i32>,
+    ) -> UserDeleteResponse {
+        let result = users::delete(user_id, &pool).await;
+        match result {
+            Ok(_) => UserDeleteResponse::Ok(Info::Info(PlainText(result.unwrap().username))),
+            Err(_e) => UserDeleteResponse::NotFound
+        }
+    }
+}
+
