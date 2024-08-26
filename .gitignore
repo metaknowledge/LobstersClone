@@ -1,3 +1,8 @@
 server/target/
-server/shell.nix # look for rust nix.shell for nix shell build script
+# look for rust nix.shell for nix shell build script
+server/shell.nix
 server/Cargo.lock
+
+# Added by cargo
+
+/target
