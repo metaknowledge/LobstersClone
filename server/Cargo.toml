@@ -1,4 +1,5 @@
-name = "poem-testing"
+[package]
+name = "ningit"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +12,6 @@ poem-openapi = {version = "5.0.3", features = ["swagger-ui"]}
 serde = "1.0.206"
 sqlx = {version="0.8.0", features = ["postgres", "runtime-tokio-rustls", "macros"]}
 tokio = {version = "1.39.2", features = ["full"]}
-
 
 [profile.dev]
 opt-level = 1

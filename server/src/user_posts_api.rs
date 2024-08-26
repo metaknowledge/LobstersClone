@@ -1,16 +1,35 @@
+
 use poem::web::Data;
+use poem::Request;
 use poem_openapi::param::{Path, Query};
+use poem_openapi::Object;
 use poem_openapi::{payload::PlainText, OpenApi};
-use sqlx::postgres::PgQueryResult;
 use sqlx::{Pool, Postgres};
-use poem_openapi::payload::Json;
+use poem_openapi::payload::{Html, Json};
 use crate::users;
-use crate::posts;
+use crate::posts::{self, Post};
 use crate::routes::{PostApiResponse, UserApiResponse, UserDeleteResponse, Info};
 pub struct PostsApi;
 
+#[derive(Object, Clone)]
+pub struct CreatePost {
+    pub user_id: String,
+    pub title: String,
+    pub content: String,
+}
+
+
+
 #[OpenApi]
 impl PostsApi {
+    #[oai(path="/", method="get")]
+    async fn get_site(&self) -> Html<String> {
+        // let contents = fs::read_to_string("../frontend/index.html")
+            // .expect("Should have been able to read the file");
+        let contents = tokio::fs::read_to_string("../frontend/index.html").await.expect("should have been able to read the file");
+        Html(contents)
+    }
+
 
     // get all posts
     #[oai(path="/posts/all/", method="get")]
@@ -20,6 +39,38 @@ impl PostsApi {
     ) -> PostApiResponse {
         let posts = posts::read_all_posts(&pool).await.unwrap();        
         PostApiResponse::Ok(Json(posts))
+    }
+
+    #[oai(path="/html/posts/all/", method="get")]
+    async fn get_all_posts_as_html(
+        &self,
+        pool: Data<&Pool<Postgres>>
+    ) -> Html<String> {
+        let posts = posts::read_all_posts(&pool).await.unwrap();  
+        let html = Self::into_html(posts);
+        // PostApiResponse::Ok(Json(posts))
+        Html(html)
+    }
+
+    fn into_html(posts: Vec<Post>) -> String {
+        let mut html: String = String::from("<tr>");
+
+        html = posts.iter().map(|post| 
+            "<tr>".to_string() + 
+            &format!("<td>{}</td>", post.title) + 
+            &format!("<td>{}</td>", post.username) +
+            &format!("<td>{}</td>", post.content) +
+            &format!("<td>{}</td>", post.postid) +
+            "</tr>"
+        ).collect::<String>();
+
+        // for post in posts {
+        //     let title = format!("<td>{}</td>", post.title);
+        //     let username = format!("<td>{}</td>", post.postid);
+        //     let content = format!("<td>{}</td>", post.content);
+        //     html = html + &title;
+        // }
+        return html;
     }
 
     // get one post
@@ -34,16 +85,22 @@ impl PostsApi {
     }
 
     // create post
-    #[oai(path="/post/", method="post")]
+    #[oai(path="/post", method="post")]
     async fn post_post(
-        &self,
+        &self,        
         pool: Data<&Pool<Postgres>>,
-        Query(title): Query<Option<String>>,
-        Query(content): Query<Option<String>>,
-        Query(user_id): Query<i32>
+        create_post: Json<CreatePost>
     ) -> PlainText<String> {
-        let _ = posts::create(title.unwrap(), content.unwrap(), user_id, &pool).await;
-        PlainText("hello".to_string())  
+        let title = create_post.title.clone();
+        let content = create_post.content.clone();
+        let user_id = create_post.user_id.clone().parse::<i32>().unwrap();
+        println!("{:?}, {:?}, {:?}", title, content, user_id);
+        let result = posts::create(title, content, user_id, &pool).await;
+        match result {
+            Ok(postid) => PlainText(format!("{}", postid)),
+            Err(_) => PlainText("An error has occured".to_string())
+        }
+        
     }
 
     // delete post

@@ -9,26 +9,25 @@ use sqlx::Row;
 
 #[derive(Default, Debug, FromRow, Serialize, Deserialize, Object)]
 pub struct Post {
-    pub postid: Option<i32>,
-    pub userid: Option<i32>,
+    pub postid: i32,
+    pub username: String,
     pub title: String,
     pub content: String,
 }
 
 
-
 impl Display for Post {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ID: {}, TITLE: {}, POSTS: {}", self.postid.unwrap(), self.title, self.content)
+        write!(f, "ID: {}, TITLE: {}, POSTS: {}", self.postid, self.title, self.content)
     }
 }
 
 pub async fn create(title: String, content: String, user_id: i32, pool: &sqlx::PgPool) -> Result<i32, Box<dyn std::error::Error>> {
     let result = 
             sqlx::query("INSERT INTO posts (title, content, userid) VALUES ($1, $2, $3) RETURNING postid;")
-            .bind(user_id)
             .bind(title)
             .bind(content)
+            .bind(user_id)
             .fetch_one(pool)
             .await?;
     Ok(result.get("postid"))
@@ -52,7 +51,7 @@ pub async fn delete(post_id: i32, pool: &sqlx::PgPool) -> Result<PgQueryResult, 
 
 pub async fn read_all_posts(pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
     let result = 
-        sqlx::query_as!(Post, "SELECT * FROM posts;")
+        sqlx::query_as!(Post, "SELECT p.title, p.content, p.postid, u.username FROM posts p JOIN users u ON p.userid = u.userid;")
             .fetch_all(pool)
             .await?;
     Ok(result)
@@ -61,7 +60,7 @@ pub async fn read_all_posts(pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn st
 pub async fn read_from_id(post_id: i32, pool: &sqlx::PgPool) -> Result<Post, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(Post,
-            "SELECT * FROM Posts WHERE postid=$1;", post_id)
+            "SELECT p.title, p.content, p.postid, u.username FROM Posts p JOIN users u ON p.userid = u.userid WHERE postid=$1;", post_id)
             .fetch_one(pool).await?;
     Ok(result)
 }
