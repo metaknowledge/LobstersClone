@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+<h1>ningit</h1>
+<p>Latin for it is snowing</p>
+<form hx-post="api/post" hx-ext="json-enc">
+    <input type="number" name="user_id" value=5>
+    <input type="text" name="title" value="title">
+    <input type="text" name="content" value="content">
+    <input type="submit" value="Submit">
+</form>
+
+<!-- <button hx-target="#me" hx-post="/post" hx-vals='{"user_id": 5, "title": "test", "content": "test"}'>Submit</button>
+<p id="me"></p> -->
+<table>
+    <tr hx-get='/api/html/posts?page=0' hx-trigger="revealed" hx-swap="afterend">
+        <th>Title</th>
+        <th>User</th>
+        <th>Content</th>
+    </tr>
+</table>
+{% endblock %}

@@ -1,11 +1,9 @@
-use std::f32::consts::E;
 use std::fmt::Display;
 
 use sqlx::postgres::PgQueryResult;
 use sqlx::prelude::FromRow;
 use serde::{Deserialize, Serialize};
-use poem_openapi::{ApiResponse, Object};
-use poem_openapi::payload::Json;
+use poem_openapi::Object;
 use sqlx::Row;
 #[derive(Default, Debug, FromRow, Serialize, Deserialize, Object)]
 pub struct User {
@@ -58,6 +56,14 @@ pub async fn read_all(pool: &sqlx::PgPool) -> Result<Vec<User>, Box<dyn std::err
 pub async fn read_from_id(user_id: i32, pool: &sqlx::PgPool) -> Result<User, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(User, "SELECT * FROM users WHERE userid=$1;", user_id)
+            .fetch_one(pool).await?;
+    
+    Ok(result)
+}
+
+pub async fn read_username(username: String, pool: &sqlx::PgPool) -> Result<User, Box<dyn std::error::Error>> {
+    let result = 
+        sqlx::query_as!(User, "SELECT * FROM users WHERE username=$1;", username)
             .fetch_one(pool).await?;
     
     Ok(result)

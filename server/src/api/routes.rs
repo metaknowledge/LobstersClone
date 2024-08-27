@@ -1,8 +1,6 @@
-use poem_openapi::payload::PlainText;
-use poem_openapi::{Object, ResponseContent};
-use poem_openapi::{payload::Json, ApiResponse};
-use crate::users::User;
-use crate::posts::Post;
+use poem_openapi::{payload::{PlainText, Json}, ApiResponse};
+use crate::api::users::User;
+use crate::api::posts::Post;
 
 
 #[derive(ApiResponse)]
@@ -41,7 +39,7 @@ pub enum PostApiResponse {
     NotFound,
 }
 
-#[derive(ResponseContent)]
+#[derive(poem_openapi::ResponseContent)]
 pub enum Info {
     Info(PlainText<String>)
 }

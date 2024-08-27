@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+<form hx-post="api/user" hx-ext="json-enc" hx-target="#test">
+    <label for="username">username:</label>
+    <input type="text" name="username" id="username" required>
+    <label for="email">email:</label>
+    <input type="email" name="email" id="email" required>
+    <label for="password">password:</label>
+    <input type="password" name="password" id="password" required>
+    <input type="submit" value="Submit">
+</form>
+<p id="test"></p>
+{% endblock %}

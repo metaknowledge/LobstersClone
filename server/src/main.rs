@@ -1,11 +1,12 @@
-use poem::{listener::TcpListener, EndpointExt, Route, Server};
-use poem_openapi::OpenApiService;
+use api::user_posts_api::PostsApi;
+use handlers::post;
+use poem::{handler, listener::TcpListener, EndpointExt, IntoResponse, Route, Server};
+use poem_openapi::{OpenApi, OpenApiService};
 use sqlx::{postgres::PgPool, Pool, Postgres};
-mod user_posts_api;
-mod posts;
-mod users;
-mod routes;
-use crate::user_posts_api::PostsApi;
+mod api;
+mod handlers;
+mod ui;
+use crate::handlers::home;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,14 +14,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     server(pool).await?;
     Ok(())
 }
+
+
  
 async fn server(pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> {
     let api_service =
-        OpenApiService::new(PostsApi, "Hello World", "1.0").server("http://localhost:3000");
+        OpenApiService::new(PostsApi, "Hello World", "1.0")
+        .server("http://localhost:3000/api");
+
+    let ui_service = ui::get_service().server("http://localhost:3000/");
     let ui = api_service.swagger_ui();
     let app = Route::new()
-        .nest("/", api_service)
-        .nest("/docs", ui)
+        .nest("/api", api_service)
+        .nest("api/docs", ui)
+        .nest("/", ui_service)
+        .nest(
+            "/static",
+            poem::endpoint::StaticFilesEndpoint::new("./css/").show_files_listing(),
+        )
         .data(pool);
 
     Server::new(TcpListener::bind("127.0.0.1:3000"))

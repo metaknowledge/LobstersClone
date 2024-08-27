@@ -3,8 +3,7 @@ use std::fmt::Display;
 use sqlx::postgres::PgQueryResult;
 use sqlx::prelude::FromRow;
 use serde::{Deserialize, Serialize};
-use poem_openapi::{ApiResponse, Object};
-use poem_openapi::payload::Json;
+use poem_openapi::Object;
 use sqlx::Row;
 
 #[derive(Default, Debug, FromRow, Serialize, Deserialize, Object)]
@@ -57,10 +56,35 @@ pub async fn read_all_posts(pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn st
     Ok(result)
 }
 
+pub async fn read_page_number(page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
+    let result = 
+        sqlx::query_as!(Post,
+            "SELECT p.title, p.content, p.postid, u.username
+            FROM posts p 
+            JOIN users u 
+            ON p.userid = u.userid
+            ORDER BY p.postid
+            LIMIT 20
+            OFFSET $1
+            ;", page * 10
+        )
+            .fetch_all(pool)
+            .await?;
+    Ok(result)
+}
+
 pub async fn read_from_id(post_id: i32, pool: &sqlx::PgPool) -> Result<Post, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(Post,
             "SELECT p.title, p.content, p.postid, u.username FROM Posts p JOIN users u ON p.userid = u.userid WHERE postid=$1;", post_id)
             .fetch_one(pool).await?;
+    Ok(result)
+}
+
+pub async fn get_posts_from_user(username: String, pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
+    let result = 
+        sqlx::query_as!(Post,
+            "SELECT p.title, p.content, p.postid, u.username FROM Posts p JOIN users u ON p.userid = u.userid WHERE username=$1;", username)
+            .fetch_all(pool).await?;
     Ok(result)
 }
