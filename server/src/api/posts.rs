@@ -51,14 +51,6 @@ pub async fn delete(post_id: i32, pool: &sqlx::PgPool) -> Result<PgQueryResult, 
     Ok(result)
 }
 
-pub async fn read_all_posts(pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
-    let result = 
-        sqlx::query_as!(Post, "SELECT p.title, p.content, p.postid, u.username FROM posts p JOIN users u ON p.userid = u.userid;")
-            .fetch_all(pool)
-            .await?;
-    Ok(result)
-}
-
 pub async fn read_page_number(page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(Post,

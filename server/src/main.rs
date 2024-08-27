@@ -1,6 +1,6 @@
 use api::user_posts_api::PostsApi;
-use poem::{handler, listener::TcpListener, EndpointExt, IntoResponse, Route, Server};
-use poem_openapi::{OpenApi, OpenApiService};
+use poem::{listener::TcpListener, EndpointExt, Route, Server};
+use poem_openapi::OpenApiService;
 use sqlx::{postgres::PgPool, Pool, Postgres};
 mod api;
 mod ui;

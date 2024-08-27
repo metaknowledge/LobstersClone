@@ -1,11 +1,8 @@
 use askama::Template;
-use poem::web::Data;
-use poem::{IntoResponse, Response};
-use poem_openapi::param::{Path, Query};
-use poem_openapi::{ApiResponse, Object, OpenApiService, ResponseContent};
-use poem_openapi::{payload::PlainText, OpenApi};
-use sqlx::{Pool, Postgres};
-use poem_openapi::payload::{Html, Json};
+use poem_openapi::param::Path;
+use poem_openapi::{ApiResponse, OpenApiService};
+use poem_openapi::OpenApi;
+use poem_openapi::payload::Html;
 
 
 #[derive(Template)]
@@ -86,16 +83,3 @@ pub fn get_service() -> OpenApiService<UiApi, ()> {
     
 }
 
-// cite: https://github.com/nicolasauler/anodized-poem/blob/main/src/main.rs
-struct HtmlTemplate<T>(T);
-impl<T> IntoResponse for HtmlTemplate<T>
-where
-    T: Template + Send + Sync + 'static,
-{
-    fn into_response(self) -> poem::Response {
-        let body = self.0.render().unwrap();
-        poem::Response::builder()
-            .content_type("text/html; charset=utf-8")
-            .body(body)
-    }
-}

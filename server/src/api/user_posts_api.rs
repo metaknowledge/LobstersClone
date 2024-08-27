@@ -7,7 +7,7 @@ use sqlx::{Pool, Postgres};
 use poem_openapi::payload::{Html, Json};
 use crate::api::users;
 use crate::api::posts::{self, Post};
-use crate::api::routes::{PostApiResponse, UserApiResponse, UserDeleteResponse, Info};
+use crate::api::routes::{UserDeleteResponse, Info};
 pub struct PostsApi;
 
 #[derive(Object, Clone)]
@@ -209,17 +209,6 @@ impl PostsApi {
             .map_err(poem::error::InternalServerError)
             .unwrap();
         Html(html)
-    }
-
-    fn into_html_with_edit(posts: Vec<Post>) -> String {
-        posts.iter().map(|post| 
-            "<tr hx-target=\"this\" hx-swap=\"outerHTML\">".to_string() + 
-            &format!("<td><a href=\"/post/{}\">{}</a></td>", post.postid, post.title) + 
-            &format!("<td><a href=\"/user/{}\">{}</a></td>", post.username, post.username) +
-            &format!("<td>{}</td>", post.content) +
-            &format!("<button hx-get=\"/html/{}/edit\" class=\"btn primary\"></tr>", post.postid)
-        )
-        .collect::<String>()
     }
 
     // create user
