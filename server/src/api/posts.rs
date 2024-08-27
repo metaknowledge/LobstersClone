@@ -81,10 +81,18 @@ pub async fn read_from_id(post_id: i32, pool: &sqlx::PgPool) -> Result<Post, Box
     Ok(result)
 }
 
-pub async fn get_posts_from_user(username: String, pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
+pub async fn get_posts_from_user(username: String, page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(Post,
-            "SELECT p.title, p.content, p.postid, u.username FROM Posts p JOIN users u ON p.userid = u.userid WHERE username=$1;", username)
+            "SELECT p.title, p.content, p.postid, u.username
+            FROM Posts p
+            JOIN users u
+            ON p.userid = u.userid
+            WHERE username=$1
+            ORDER BY p.postid
+            LIMIT 20
+            OFFSET $2
+            ;", username, page * 10)
             .fetch_all(pool).await?;
     Ok(result)
 }

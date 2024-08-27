@@ -1,12 +1,9 @@
 use api::user_posts_api::PostsApi;
-use handlers::post;
 use poem::{handler, listener::TcpListener, EndpointExt, IntoResponse, Route, Server};
 use poem_openapi::{OpenApi, OpenApiService};
 use sqlx::{postgres::PgPool, Pool, Postgres};
 mod api;
-mod handlers;
 mod ui;
-use crate::handlers::home;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

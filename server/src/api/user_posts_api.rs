@@ -1,3 +1,4 @@
+use askama::Template;
 use poem::web::Data;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::Object;
@@ -16,6 +17,12 @@ pub struct CreatePost {
     pub content: String,
 }
 
+#[derive(Object, Clone, Default)]
+pub struct UpdatePost {
+    pub title: String,
+    pub content: String,
+}
+
 #[derive(Object, Clone)]
 pub struct CreateUser {
     pub username: String,
@@ -23,57 +30,39 @@ pub struct CreateUser {
     pub password: String,
 }
 
+#[derive(Template)]
+#[template(path = "posts.html")]
+struct PostsTemplate {
+    pub posts: Vec<Post>,
+    pub page: i64,
+    pub editable: bool,
+}
 
+#[derive(Template)]
+#[template(path = "editpost.html")]
+struct EditPostTemplate {
+    pub postid: i64,
+    pub title: String,
+    pub content: String,
+}
 
 #[OpenApi]
 impl PostsApi {
-    // get all posts
-    #[oai(path="/posts/all/", method="get")]
-    async fn get_all_posts(
-        &self,
-        pool: Data<&Pool<Postgres>>
-    ) -> PostApiResponse {
-        let posts: Vec<Post> = posts::read_all_posts(&pool).await.unwrap();        
-        PostApiResponse::Ok(Json(posts))
-    }
-
-    #[oai(path="/html/posts/all/", method="get")]
-    async fn get_all_posts_as_html(
-        &self,
-        pool: Data<&Pool<Postgres>>
-    ) -> Html<String> {
-        let posts = posts::read_all_posts(&pool).await.unwrap();  
-        let html = Self::into_html(posts);
-        // PostApiResponse::Ok(Json(posts))
-        Html(html)
-    }
-
     #[oai(path="/html/posts", method="get")]
     async fn get_page_html(
         &self,
         Query(page): Query<Option<i64>>,
         pool: Data<&Pool<Postgres>>
     ) -> Html<String> {
-
         let posts: Vec<Post> = posts::read_page_number(page.unwrap(), &pool).await.unwrap();  
         if posts.len() == 0 {
             return Html("You made it to the bottom".to_string())
         }
-        let mut html = Self::into_html(posts);
-        html += &format!("<tr hx-get=\"api/html/posts?page={}\" hx-trigger=\"revealed\" hx-swap=\"outerHTML\"></tr>", page.unwrap() + 1);
-        // PostApiResponse::Ok(Json(posts))
+        let html = PostsTemplate {posts: posts, page: page.unwrap() + 1, editable: false}
+            .render()
+            .map_err(poem::error::InternalServerError)
+            .unwrap();
         Html(html)
-    }
-
-    fn into_html(posts: Vec<Post>) -> String {
-        posts.iter().map(|post| 
-            "<tr>".to_string() + 
-            &format!("<td><a href=\"/post/{}\">{}</a></td>", post.postid, post.title) + 
-            &format!("<td><a href=\"/user/{}\">{}</a></td>", post.username, post.username) +
-            &format!("<td>{}</td>", post.content) +
-            "</tr>"
-        )
-        .collect::<String>()
     }
 
     // get one post
@@ -121,11 +110,24 @@ impl PostsApi {
         &self,
         pool: Data<&Pool<Postgres>>,
         Path(post_id): Path<i32>,
-        Query(title): Query<Option<String>>,
-        Query(content): Query<Option<String>>,
+        update_post: Json<UpdatePost>
     ) -> PlainText<String> {
-        let _ = posts::update(title.unwrap(), content.unwrap(), post_id, &pool).await;        
+        let _ = posts::update(update_post.title.clone(), update_post.content.clone(), post_id, &pool).await;        
         PlainText("updated".to_string())  
+    }
+
+    #[oai(path="/post/:post_id/edit", method="get")]
+    async fn edit_post_html(
+        &self,
+        Path(post_id): Path<String>,
+        pool: Data<&Pool<Postgres>>,
+    ) -> Html<String> {
+        let post = posts::read_from_id(post_id.parse::<i32>().unwrap(), &pool).await.unwrap();        
+        let html = EditPostTemplate {postid: post_id.parse::<i64>().unwrap(), title: post.title, content: post.content }
+            .render()
+            .map_err(poem::error::InternalServerError)
+            .unwrap();
+        Html(html)
     }
 
     // get all users
@@ -156,8 +158,6 @@ impl PostsApi {
             },
             None => PlainText("No username provided".to_string())
         }
-               
-        
     }
 
     // get one user
@@ -165,10 +165,21 @@ impl PostsApi {
     async fn get_user_posts(
         &self,
         Path(username): Path<String>,
+        Query(page_number): Query<Option<i64>>,
         pool: Data<&Pool<Postgres>>,
     ) -> Html<String> {
-        let posts: Vec<Post> = posts::get_posts_from_user(username, &pool).await.unwrap();        
-        let html = Self::into_html_with_edit(posts);
+        let page = match page_number {
+            Some(page) => page,
+            None => 0
+        };
+        let posts: Vec<Post> = posts::get_posts_from_user(username, page, &pool).await.unwrap();        
+        if posts.len() == 0 {
+            return Html("You made it to the bottom".to_string())
+        }
+        let html = PostsTemplate {posts: posts, page: page + 1, editable: true}
+            .render()
+            .map_err(poem::error::InternalServerError)
+            .unwrap();
         Html(html)
     }
 

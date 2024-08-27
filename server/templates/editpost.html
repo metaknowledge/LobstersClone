@@ -1,0 +1,24 @@
+<tr id="replace{{postid}}">
+    <td>
+        <input type="text" name="title" value="{{title}}">
+    </td>
+    <td>
+          <label>User</label>
+    </td>
+    <td>
+      <input type="text" name="content" value="{{content}}">
+    </td>
+    <td>
+        <button 
+          hx-put="/post/{{postid}}"
+          hx-ext="json-enc"
+          hx-target="#replace{{postid}}"
+          hx-swap="outerHTML"
+          type="submit"
+          hx-include="[name='title'], [name='content']">
+          Submit
+        </button>
+        <!-- <button class="btn" hx-get="/contact/{{postid}}">Cancel</button> -->
+    </td>
+  </form>
+  </tr>

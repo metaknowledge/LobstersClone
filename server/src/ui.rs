@@ -13,7 +13,7 @@ use poem_openapi::payload::{Html, Json};
 struct HomeTemplate;
 
 #[derive(Template)]
-#[template(path = "post.html")]
+#[template(path = "focus_post.html")]
 struct PostTemplate {
     pub postid: i64
 }
