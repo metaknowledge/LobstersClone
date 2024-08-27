@@ -12,7 +12,28 @@ body {
     max-width: 52em;
 }
 
-tr {
-    height: 2em;
+tr:nth-child(odd) {
+    background-color: #f0f0f0;
 }
 
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.item {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 1em;
+}
+
+/* div.index {
+    flex-grow: 1;
+} */
+
+div.content {
+    flex-grow: 2;
+}

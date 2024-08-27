@@ -1,0 +1,21 @@
+{% if editable %}
+<tr hx-target="this" hx-swap="outerHTML">
+{% else %}
+<tr>
+{% endif %}
+    <td><a href="/post/{{post.postid}}">{{post.title}}</a></td>
+    <td><a href="/user/{{post.username}}">{{post.username}}</a></td>
+    <td>{{post.content}}</td>
+    {% if editable %}
+    <td>
+        <button hx-get="/api/post/{{post.postid}}/edit" class="btn primary">
+            Click To Edit
+        </button>
+    </td>
+    <td>
+        <button hx-delete="/api/post/{{post.postid}}" class="btn primary">
+            Delete
+        </button>
+    </td>
+    {% endif %}
+</tr>

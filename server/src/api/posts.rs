@@ -17,16 +17,19 @@ pub struct Post {
 
 impl Display for Post {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ID: {}, TITLE: {}, POSTS: {}", self.postid, self.title, self.content)
+        write!(f, "USERNAME: {}, TITLE: {}, CONTENT: {}", self.username, self.title, self.content)
     }
 }
 
-pub async fn create(title: String, content: String, user_id: i32, pool: &sqlx::PgPool) -> Result<i32, Box<dyn std::error::Error>> {
+pub async fn create(title: String, content: String, username: String, pool: &sqlx::PgPool) -> Result<i32, Box<dyn std::error::Error>> {
     let result = 
-            sqlx::query("INSERT INTO posts (title, content, userid) VALUES ($1, $2, $3) RETURNING postid;")
+            sqlx::query(
+                "INSERT INTO posts (title, content, userid)
+                    VALUES ($1, $2, (SELECT userid FROM users WHERE username=$3))
+                    RETURNING postid;")
             .bind(title)
             .bind(content)
-            .bind(user_id)
+            .bind(username)
             .fetch_one(pool)
             .await?;
     Ok(result.get("postid"))
@@ -34,7 +37,7 @@ pub async fn create(title: String, content: String, user_id: i32, pool: &sqlx::P
 
 pub async fn update(title: String, content: String, post_id: i32, pool: &sqlx::PgPool) -> Result<PgQueryResult, Box<dyn std::error::Error>> {
     let result = 
-            sqlx::query!("UPDATE posts set title=$1, content=$2 WHERE postid=$3;", title, content, post_id)
+            sqlx::query_as!(Post, "UPDATE posts set title=$1, content=$2 WHERE postid=$3;", title, content, post_id)
             .execute(pool)
             .await?;
     Ok(result)
@@ -64,7 +67,7 @@ pub async fn read_page_number(page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post
             JOIN users u 
             ON p.userid = u.userid
             ORDER BY p.postid
-            LIMIT 20
+            LIMIT 10
             OFFSET $1
             ;", page * 10
         )
@@ -90,7 +93,7 @@ pub async fn get_posts_from_user(username: String, page: i64, pool: &sqlx::PgPoo
             ON p.userid = u.userid
             WHERE username=$1
             ORDER BY p.postid
-            LIMIT 20
+            LIMIT 10
             OFFSET $2
             ;", username, page * 10)
             .fetch_all(pool).await?;

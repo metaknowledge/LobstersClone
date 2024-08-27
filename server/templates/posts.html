@@ -1,29 +1,36 @@
-{%for post in posts%}
+{%for (i, post) in posts.iter().enumerate()%}
     {% if editable %}
-    <tr hx-target="this" hx-swap="outerHTML">
+    <div hx-target="this" hx-swap="outerHTML" class="item">
     {% else %}
-    <tr>
+    <div class="item">
     {% endif %}
-        <td><a href="/post/{{post.postid}}">{{post.title}}</a></td>
-        <td><a href="/user/{{post.username}}">{{post.username}}</a></td>
-        <td>{{post.content}}</td>
-        {% if editable %}
-        <td>
-            <button hx-get="/api/post/{{post.postid}}/edit" class="btn primary">
-                Click To Edit
-            </button>
-        </td>
-        {% endif %}
-    </tr>
+        <div class="index">
+            {{i}}
+        </div>
+        <div class="content">
+            <span><a href="/post/{{post.postid}}">{{post.title}}</a></span>
+            <div>
+                <a href="/user/{{post.username}}">{{post.username}}</a>
+                {% if editable %}
+                <button hx-get="/api/post/{{post.postid}}/edit" class="btn primary">
+                    Click To Edit
+                </button>
+                <button hx-delete="/api/post/{{post.postid}}" class="btn primary">
+                    Delete
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 {% endfor %}
 
 {% if editable %}
-<tr hx-get="/api/user/posts/{{posts.iter().next().unwrap().username}}?page_number={{page}}" hx-target="this" hx-trigger="revealed" hx-swap="outerHTML">
+<div hx-get="/api/user/posts/{{posts.iter().next().unwrap().username}}?page_number={{page}}" hx-target="this" hx-trigger="revealed" hx-swap="outerHTML">
 
-</tr>
+</div>
 {% else %}
-<tr hx-get="/api/html/posts?page={{page}}" hx-target="this" hx-trigger="revealed" hx-swap="outerHTML">
+<div hx-get="/api/html/posts?page={{page}}" hx-target="this" hx-trigger="revealed" hx-swap="outerHTML">
 
-</tr>
+</div>
 {% endif %}
 

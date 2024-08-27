@@ -12,7 +12,7 @@ pub struct PostsApi;
 
 #[derive(Object, Clone)]
 pub struct CreatePost {
-    pub user_id: String,
+    pub username: String,
     pub title: String,
     pub content: String,
 }
@@ -39,6 +39,13 @@ struct PostsTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "post.html")]
+struct PostTemplate {
+    pub post: Post,
+    pub editable: bool,
+}
+
+#[derive(Template)]
 #[template(path = "editpost.html")]
 struct EditPostTemplate {
     pub postid: i64,
@@ -49,7 +56,7 @@ struct EditPostTemplate {
 #[OpenApi]
 impl PostsApi {
     #[oai(path="/html/posts", method="get")]
-    async fn get_page_html(
+    async fn get_paged_html(
         &self,
         Query(page): Query<Option<i64>>,
         pool: Data<&Pool<Postgres>>
@@ -85,8 +92,8 @@ impl PostsApi {
     ) -> PlainText<String> {
         let title = create_post.title.clone();
         let content = create_post.content.clone();
-        let user_id = create_post.user_id.clone().parse::<i32>().unwrap();
-        let result = posts::create(title, content, user_id, &pool).await;
+        let username = create_post.username.clone();
+        let result = posts::create(title, content, username, &pool).await;
         match result {
             Ok(postid) => PlainText(format!("{}", postid)),
             Err(_) => PlainText("An error has occured".to_string())
@@ -111,10 +118,31 @@ impl PostsApi {
         pool: Data<&Pool<Postgres>>,
         Path(post_id): Path<i32>,
         update_post: Json<UpdatePost>
-    ) -> PlainText<String> {
-        let _ = posts::update(update_post.title.clone(), update_post.content.clone(), post_id, &pool).await;        
-        PlainText("updated".to_string())  
+    ) -> Html<String> {
+        let title = update_post.title.clone();
+        let content = update_post.content.clone();
+        let result = posts::update(title.clone(), content.clone(), post_id, &pool).await.unwrap();        
+        match result.rows_affected() {
+            0 => Html("could not update row".to_string()),
+            _ => {
+                let post = Post {
+                    title: title,
+                    postid: post_id,
+                    username: String::new(),
+                    content: content
+                };
+                let html = PostTemplate {post: post, editable: true}
+                    .render()
+                    .map_err(poem::error::InternalServerError)
+                    .unwrap();
+                Html(html)
+            }
+        }
     }
+    
+    // fn render_html(template: impl Template) -> String {
+    //     template.render().map_err(poem::error::InternalServerError("oh no")).unwrap()
+    // }
 
     #[oai(path="/post/:post_id/edit", method="get")]
     async fn edit_post_html(
