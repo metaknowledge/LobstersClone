@@ -3,7 +3,10 @@ use poem_openapi::param::Path;
 use poem_openapi::{ApiResponse, OpenApiService};
 use poem_openapi::OpenApi;
 use poem_openapi::payload::Html;
-
+use sqlx::{Pool, Postgres};
+use poem::web::Data;
+use crate::api::posts::{self, Post};
+use crate::api::users::{self, User};
 
 #[derive(Template)]
 #[template(path = "home.html")]
@@ -12,7 +15,7 @@ struct HomeTemplate;
 #[derive(Template)]
 #[template(path = "focus_post.html")]
 struct PostTemplate {
-    pub postid: i64
+    pub post: Post
 }
 
 #[derive(Template)]
@@ -23,6 +26,12 @@ struct SignupTemplate;
 #[template(path = "user.html")]
 struct UserTempate {
     pub username: String,
+}
+
+#[derive(Template)]
+#[template(path = "allusers.html")]
+struct AllUsersTempate {
+    pub users: Vec<User>,
 }
 
 #[derive(ApiResponse)]
@@ -44,11 +53,22 @@ impl UiApi {
     #[oai(path="/post/:id", method="get")]
     async fn post(
         &self,
-        Path(id): Path<Option<i64>>,
-    ) -> Html<String> {       
-        let post = PostTemplate{postid: id.unwrap()}.render().map_err(poem::error::InternalServerError).unwrap();
-        Html(post)
+        Path(id): Path<i32>,
+        pool: Data<&Pool<Postgres>>,
+    ) -> Html<String> { 
+        let post = posts::read_from_id(id, &pool).await.unwrap();        
+        let html: String = PostTemplate{post: post}.render().map_err(poem::error::InternalServerError).unwrap();
+        Html(html)
     }
+    // async fn get_post_from_id(
+    //     &self,
+    //     Path(post_id): Path<String>,
+    //     pool: Data<&Pool<Postgres>>,
+    // ) -> PlainText<String> {
+    //     let post = posts::read_from_id(post_id.parse::<i32>().unwrap(), &pool).await.unwrap();        
+    //     PlainText(post.to_string())
+    // }
+
 
     #[oai(path="/", method="get")]
     async fn home(
@@ -71,8 +91,22 @@ impl UiApi {
         &self,
         Path(user): Path<String>,
     ) -> Html<String> {
-        let user = UserTempate{username: user}.render().map_err(poem::error::InternalServerError).unwrap();
-        Html(user)
+        let usertemp = UserTempate{username: user}.render().map_err(poem::error::InternalServerError).unwrap();
+        Html(usertemp)
+    }
+
+    #[oai(path="/users", method="get")]
+    async fn users(
+        &self,
+        pool: Data<&Pool<Postgres>>
+
+    ) -> Html<String> {
+        let users: Vec<User> = users::read_all(&pool).await.unwrap();     
+        let userstemp = AllUsersTempate {users: users}
+            .render()
+            .map_err(poem::error::InternalServerError)
+            .unwrap();
+        Html(userstemp)
     }
 }
 

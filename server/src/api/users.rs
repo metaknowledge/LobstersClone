@@ -44,6 +44,14 @@ pub async fn delete(user_id: i32, pool: &sqlx::PgPool) -> Result<User, Box<dyn s
     Ok(result)
 }
 
+pub async fn read_all(pool: &sqlx::PgPool) -> Result<Vec<User>, Box<dyn std::error::Error>> {
+    let result = 
+        sqlx::query_as!(User, "SELECT * FROM users;")
+            .fetch_all(pool)
+            .await?;
+    Ok(result)
+}
+
 pub async fn read_username(username: String, pool: &sqlx::PgPool) -> Result<User, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(User, "SELECT * FROM users WHERE username=$1;", username)

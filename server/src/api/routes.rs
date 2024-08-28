@@ -39,6 +39,20 @@ pub enum PostApiResponse {
     NotFound,
 }
 
+#[derive(ApiResponse)]
+pub enum CreatePostReponse {
+    #[oai(status = 200)]
+    Ok(Info),
+
+    #[oai(status = 400)]
+    InvalidRequest(Info),
+
+    #[oai(status = 404)]
+    NotFound,
+}
+
+
+
 #[derive(poem_openapi::ResponseContent)]
 pub enum Info {
     Info(PlainText<String>)

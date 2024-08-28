@@ -1,11 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div 
-    hx-target="this"
-    hx-swap="outerHTML"
-    hx-get="/api/post/{{postid}}"
-    hx-trigger="revealed">
-    test
-</div>
+<h1>{{post.title}}</h1>
+<p><a href="/user/{{post.username}}">{{post.username}}</a></p>
+<p>{{post.content}}</p>
 {% endblock content %}

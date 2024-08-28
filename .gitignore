@@ -4,5 +4,5 @@ server/shell.nix
 server/Cargo.lock
 
 # Added by cargo
-
 /target
+/server/.env

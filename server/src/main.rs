@@ -1,4 +1,4 @@
-use api::user_posts_api::PostsApi;
+use api::user_posts_api::{self, PostsApi};
 use poem::{listener::TcpListener, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 use sqlx::{postgres::PgPool, Pool, Postgres};
@@ -15,11 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
  
 async fn server(pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> {
-    let api_service =
-        OpenApiService::new(PostsApi, "Hello World", "1.0")
-        .server("http://localhost:3000/api");
-
-    let ui_service = ui::get_service().server("http://localhost:3000/");
+    let api_service: OpenApiService<PostsApi, ()> = user_posts_api::get_service()
+        .server("https://localhost:3000/api");
+    let ui_service: OpenApiService<ui::UiApi, ()> = ui::get_service()
+        .server("https://localhost:3000/");
     let ui = api_service.swagger_ui();
     let app = Route::new()
         .nest("/api", api_service)
@@ -40,7 +39,7 @@ async fn server(pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> 
 async fn sql_postgres() -> Result<Pool<Postgres>, Box<dyn std::error::Error>> {
     let url: &str = "postgres://postgres:password@localhost:5432/new_database";
     let pool: Pool<Postgres> = PgPool::connect(url).await?;
-
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    sqlx::migrate!("./migrations")
+        .run(&pool).await?;
     Ok(pool)
 }

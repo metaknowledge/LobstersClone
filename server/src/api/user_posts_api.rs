@@ -8,6 +8,8 @@ use poem_openapi::payload::{Html, Json};
 use crate::api::users;
 use crate::api::posts::{self, Post};
 use crate::api::routes::{UserDeleteResponse, Info};
+
+use super::routes::{CreatePostReponse, UserApiResponse};
 pub struct PostsApi;
 
 #[derive(Object, Clone)]
@@ -43,6 +45,7 @@ struct PostsTemplate {
 struct PostTemplate {
     pub post: Post,
     pub editable: bool,
+    pub i: i32
 }
 
 #[derive(Template)]
@@ -89,14 +92,15 @@ impl PostsApi {
         &self,        
         pool: Data<&Pool<Postgres>>,
         create_post: Json<CreatePost>
-    ) -> PlainText<String> {
+    ) -> CreatePostReponse {
         let title = create_post.title.clone();
         let content = create_post.content.clone();
         let username = create_post.username.clone();
+        println!("{}{}{}", title, content, username);
         let result = posts::create(title, content, username, &pool).await;
         match result {
-            Ok(postid) => PlainText(format!("{}", postid)),
-            Err(_) => PlainText("An error has occured".to_string())
+            Ok(postid) => CreatePostReponse::Ok(Info::Info(PlainText(postid.to_string()))),
+            Err(err) => CreatePostReponse::InvalidRequest(Info::Info(PlainText(err.to_string() + ": An error has occured")))
         }   
     }
 
@@ -131,7 +135,7 @@ impl PostsApi {
                     username: String::new(),
                     content: content
                 };
-                let html = PostTemplate {post: post, editable: true}
+                let html = PostTemplate {post: post, editable: true, i: 0}
                     .render()
                     .map_err(poem::error::InternalServerError)
                     .unwrap();
@@ -157,16 +161,6 @@ impl PostsApi {
             .unwrap();
         Html(html)
     }
-
-    // get all users
-    // #[oai(path="/users/all/", method="get")]
-    // async fn get_all_users(
-    //     &self,
-    //     pool: Data<&Pool<Postgres>>
-    // ) -> UserApiResponse {
-    //     let users = users::read_all(&pool).await.unwrap();        
-    //     UserApiResponse::Ok(Json(users))
-    // }
 
     // get one user
     #[oai(path="/user/:maybe_username", method="get")]
@@ -253,3 +247,9 @@ impl PostsApi {
     }
 }
 
+pub fn get_service() -> poem_openapi::OpenApiService<PostsApi, ()> {
+    let api_service =
+        poem_openapi::OpenApiService::new(PostsApi, "Hello World", "1.0");
+    api_service
+    
+}

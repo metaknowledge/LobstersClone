@@ -1,3 +1,6 @@
+
+
+
 header {
     display: flex;
     flex-direction: row;
@@ -10,19 +13,33 @@ body {
     margin: 1em auto;
     padding: 0 1em;
     max-width: 52em;
+    background-color: var(--dark-green);
+    color: var(--cornsilk);
+    /* CSS HEX */
+    --cal-poly-green: #064b26ff;
+    --dark-green: #002310;
+    --dark-green2: #043319;
+    --fern-green: #59723cff;
+    --yinmn-blue: #356198;
+    --cadet-gray: #929fb5ff;
+    --cornsilk: #fef7e0ff;
 }
 
-tr:nth-child(odd) {
-    background-color: #f0f0f0;
+div.item:nth-child(odd) {
+    background-color: var(--dark-green2);
+}
+
+div.item {
+    border-radius: .25em;
 }
 
 .container {
     display: flex;
     flex-direction: column;
-    gap: 1em;
 }
 
 .item {
+    padding: .25em 0em;
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -36,4 +53,28 @@ tr:nth-child(odd) {
 
 div.content {
     flex-grow: 2;
+}
+
+a {
+    color: var(--cadet-gray);
+    text-decoration: none;
+}
+
+a:visited {
+    color: var(--yinmn-blue);
+}
+
+.icon {
+    background-color: var(--fern-green);
+    padding: .25em;
+}
+
+p, h2 {
+    margin: .25em 0em;
+    
+}
+
+h2 {
+    font-size: medium;
+    font-style: normal;
 }

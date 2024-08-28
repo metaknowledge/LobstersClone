@@ -1,27 +1,5 @@
 {%for (i, post) in posts.iter().enumerate()%}
-    {% if editable %}
-    <div hx-target="this" hx-swap="outerHTML" class="item">
-    {% else %}
-    <div class="item">
-    {% endif %}
-        <div class="index">
-            {{i}}
-        </div>
-        <div class="content">
-            <span><a href="/post/{{post.postid}}">{{post.title}}</a></span>
-            <div>
-                <a href="/user/{{post.username}}">{{post.username}}</a>
-                {% if editable %}
-                <button hx-get="/api/post/{{post.postid}}/edit" class="btn primary">
-                    Click To Edit
-                </button>
-                <button hx-delete="/api/post/{{post.postid}}" class="btn primary">
-                    Delete
-                </button>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+    {% include "post.html" %}
 {% endfor %}
 
 {% if editable %}
