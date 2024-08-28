@@ -1,8 +1,8 @@
 server/target/
-# look for rust nix.shell for nix shell build script
+# look up rust nix.shell for nix shell build script
 server/shell.nix
 server/Cargo.lock
-
+server/.env
+server/config.toml
 # Added by cargo
 /target
-/server/.env
