@@ -1,16 +1,36 @@
 use askama::Template;
+use chrono::DateTime;
+use chrono::Local;
+use poem::middleware::AddData;
+use poem::web::cookie::Cookie;
+use poem::web::cookie::CookieJar;
 use poem::web::Data;
+use poem::web::Redirect;
+use poem::IntoResponse;
+use poem::Middleware;
 use poem_openapi::param::{Path, Query};
+use poem_openapi::types::ToJSON;
+use poem_openapi::ApiResponse;
 use poem_openapi::Object;
 use poem_openapi::{payload::PlainText, OpenApi};
+use reqwest::Response;
+use serde::Deserialize;
+use serde::Serialize;
 use sqlx::{Pool, Postgres};
 use poem_openapi::payload::{Html, Json};
 use crate::api::users;
 use crate::api::posts::{self, Post};
 use crate::api::routes::{UserDeleteResponse, Info};
-
+use oauth2::{
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, RedirectUrl, Scope, TokenResponse, TokenUrl
+};
+use oauth2::basic::BasicClient;
+use oauth2::reqwest::http_client;
+use url::Url;
 use super::routes::{CreatePostReponse, UserApiResponse};
 pub struct PostsApi;
+use std::env;
+use std::time::Duration;
 
 #[derive(Object, Clone)]
 pub struct CreatePost {
@@ -56,8 +76,108 @@ struct EditPostTemplate {
     pub content: String,
 }
 
+pub fn build_oauth_client(client_id: String, client_secret: String) -> BasicClient {
+    let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
+    
+    let auth_url = AuthUrl::new("https://discord.com/oauth2/authorize".to_string())
+        .expect("Wrong auth endpoint");
+    let token_url = TokenUrl::new("https://discord.com/api/oauth2/token".to_string())
+        .expect("Wrong token url");
+    
+    BasicClient::new(
+        ClientId::new(client_id),
+        Some(ClientSecret::new(client_secret)),
+        auth_url,
+        Some(token_url),
+    )
+    .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
+}
+
+#[derive(Deserialize, sqlx::FromRow, Clone)]
+pub struct UserProfile {
+    email: String,
+    username: String,
+}
+
+#[derive(ApiResponse)]
+enum RedirectResponse {
+    #[oai(status = "301")]
+    Redirect(#[oai(header = "Location")] String),
+    #[oai(status = 400)]
+    InvalidRequest(PlainText<String>),
+}
+
 #[OpenApi]
 impl PostsApi {
+    #[oai(path="/auth/discord/redirect", method="get")]
+    async fn discord_auth(
+        &self,
+        Query(code): Query<String>,
+        Data(pool): Data<&Pool<Postgres>>,
+        Data(middle): Data<&BasicClient>,
+        cookie_jar: &CookieJar
+    ) -> RedirectResponse {
+        
+        // let client: BasicClient = build_oauth_client(client_id, client_secret);
+        let client: BasicClient = middle.clone();
+        let token = client.exchange_code(AuthorizationCode::new(code.clone()))
+            .request_async(oauth2::reqwest::async_http_client)
+            .await.expect("should have got code");
+        // println!("done".to_string());
+        
+        
+        let ctx = reqwest::Client::new();
+        let response: Response = ctx.get("https://discord.com/api/v10/users/@me")
+            .bearer_auth(token.access_token().secret().to_owned())
+            .send().await.unwrap();
+        let profile = response.json::<UserProfile>().await.unwrap();
+
+        println!("{}, {}", profile.username, profile.email);
+
+        let Some(secs) = token.expires_in() else {
+
+            return RedirectResponse::InvalidRequest(PlainText("could not find token expiration".to_string()))
+        };
+
+        
+
+        let secs = secs.as_secs();
+
+        let max_age = Local::now() + chrono::Duration::try_seconds(secs.try_into().unwrap()).unwrap();
+
+        let mut cookie = Cookie::new("sid", token.access_token().secret().to_owned());
+        cookie.set_domain(".app.localhost");
+        cookie.set_path("/");
+        cookie.set_secure(true);
+        cookie.set_http_only(true);
+        cookie.set_max_age(core::time::Duration::from_secs(secs));
+        
+
+        let _userid = sqlx::query!("insert into users (email, username) values ($1, $2) on conflict (username) do nothing;",
+            profile.email, profile.username).execute(pool).await.unwrap();
+
+
+        let _test = sqlx::query!(
+                "INSERT INTO sessions (user_id, session_id, expires_at) VALUES (
+                (SELECT ID FROM USERS WHERE email = $1 LIMIT 1),
+                 $2, $3)
+                ON CONFLICT (user_id) DO UPDATE SET
+                session_id = excluded.session_id,
+                expires_at = excluded.expires_at",
+                profile.email,
+                token.access_token().secret().to_owned(),
+                max_age
+            )
+            .execute(pool)
+            .await.unwrap();
+
+
+        cookie_jar.add(cookie);
+
+
+        RedirectResponse::Redirect("/protected".to_string())
+    }
+
     #[oai(path="/html/posts", method="get")]
     async fn get_paged_html(
         &self,
@@ -131,7 +251,7 @@ impl PostsApi {
             _ => {
                 let post = Post {
                     title: title,
-                    postid: post_id,
+                    id: post_id,
                     username: String::new(),
                     content: content
                 };
@@ -245,6 +365,8 @@ impl PostsApi {
             Err(_e) => UserDeleteResponse::NotFound
         }
     }
+
+
 }
 
 pub fn get_service() -> poem_openapi::OpenApiService<PostsApi, ()> {
@@ -253,3 +375,5 @@ pub fn get_service() -> poem_openapi::OpenApiService<PostsApi, ()> {
     api_service
     
 }
+
+

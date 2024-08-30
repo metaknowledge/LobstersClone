@@ -7,13 +7,13 @@
         {{i}}
     </div>
     <div class="content">
-        <h2><a href="/post/{{post.postid}}">{{post.title}}</a></h2>
+        <h2><a href="/post/{{post.id}}">{{post.title}}</a></h2>
         <div>
             {% if editable %}
-            <button hx-get="/api/post/{{post.postid}}/edit" class="btn primary">
+            <button hx-get="/api/post/{{post.id}}/edit" class="btn primary">
                 Click To Edit
             </button>
-            <button hx-delete="/api/post/{{post.postid}}" hx-swap="innterHTML" class="btn primary" hx-confirm="Are you sure?">
+            <button hx-delete="/api/post/{{post.id}}" hx-swap="innterHTML" class="btn primary" hx-confirm="Are you sure?">
                 Delete
             </button>
             {% else %}

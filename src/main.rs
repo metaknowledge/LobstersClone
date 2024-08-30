@@ -1,20 +1,16 @@
-use api::user_posts_api::{self, PostsApi};
-use poem::{listener::TcpListener, EndpointExt, Route, Server};
+use api::user_posts_api::{self, build_oauth_client, PostsApi};
+use poem::{listener::TcpListener, middleware::{AddData, CookieJarManager}, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 use sqlx::{postgres::PgPool, Pool, Postgres};
 use std::env;
 mod api;
+mod build;
 mod ui;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = sql_postgres().await?;    
-    server(pool).await?;
-    Ok(())
-}
+    let pool = connect_postgresql_server().await?;
 
-async fn server(pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> {
-    
     let port = match env::var("PORT") {
         Ok(port) => port,
         Err(err) => {
@@ -22,21 +18,30 @@ async fn server(pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> 
             "3000".to_string()
         }
     };
+    start_server(port, pool).await?;
+    Ok(())
+}
 
+async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> {
+    let client_id = env::var("CLIENT_ID").unwrap();
+    let client_secret = env::var("CLIENT_SECRET").unwrap();
+    
     let api_service: OpenApiService<PostsApi, ()> = user_posts_api::get_service()
         .server(format!("https://localhost:{port}/api"));
     let ui_service: OpenApiService<ui::UiApi, ()> = ui::get_service()
         .server(format!("https://localhost:{port}/"));
-    let ui = api_service.swagger_ui();
+    let api_service_docs = api_service.swagger_ui();
     let app = Route::new()
         .nest("/api", api_service)
-        .nest("api/docs", ui)
+        .nest("api/docs", api_service_docs)
         .nest("/", ui_service)
         .nest(
             "/static",
             poem::endpoint::StaticFilesEndpoint::new("./css/").show_files_listing(),
         )
-        .data(pool);
+        .data(pool)
+        .with(AddData::new(build_oauth_client(client_id, client_secret)))
+        .with(CookieJarManager::new());
 
     Server::new(TcpListener::bind(format!("127.0.0.1:{port}")))
         .run(app)
@@ -44,9 +49,8 @@ async fn server(pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-async fn sql_postgres() -> Result<Pool<Postgres>, Box<dyn std::error::Error>> {
+async fn connect_postgresql_server() -> Result<Pool<Postgres>, Box<dyn std::error::Error>> {
     // let url = env::var("DATABASE_URL").unwrap();
-    
     let url = "postgres://postgres:password@localhost:5432/new_database";
     let pool: Pool<Postgres> = PgPool::connect(url).await?;
     sqlx::migrate!("./migrations")

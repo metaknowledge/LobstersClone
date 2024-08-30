@@ -1,12 +1,15 @@
+use std::env;
+
 use askama::Template;
 use poem_openapi::param::Path;
 use poem_openapi::{ApiResponse, OpenApiService};
 use poem_openapi::OpenApi;
-use poem_openapi::payload::Html;
+use poem_openapi::payload::{Html, PlainText};
 use sqlx::{Pool, Postgres};
 use poem::web::Data;
 use crate::api::posts::{self, Post};
 use crate::api::users::{self, User};
+
 
 #[derive(Template)]
 #[template(path = "home.html")]
@@ -108,6 +111,8 @@ impl UiApi {
             .unwrap();
         Html(userstemp)
     }
+
+    
 }
 
 pub fn get_service() -> OpenApiService<UiApi, ()> {

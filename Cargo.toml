@@ -7,12 +7,16 @@ edition = "2021"
 
 [dependencies]
 askama = "0.12.1"
+chrono = "0.4.38"
 futures = "0.3.30"
+oauth2 = "4.4.2"
 poem = { version = "3.0.4", features = ["static-files"] }
 poem-openapi = {version = "5.0.3", features = ["swagger-ui"]}
+reqwest = { version = "0.12.7", features = ["json"] }
 serde = "1.0.206"
-sqlx = {version="0.8.0", features = ["postgres", "runtime-tokio-rustls", "macros"]}
+sqlx = { version = "0.8.0", features = ["postgres", "runtime-tokio-rustls", "macros", "chrono"] }
 tokio = {version = "1.39.2", features = ["full"]}
+url = "2.5.2"
 
 [profile.dev]
 opt-level = 1
