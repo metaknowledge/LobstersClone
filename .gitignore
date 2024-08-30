@@ -5,3 +5,5 @@ Cargo.lock
 config.toml
 # Added by cargo
 /target
+/.sqlx
+/.vscode
