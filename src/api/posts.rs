@@ -23,16 +23,17 @@ impl Display for Post {
 
 pub async fn create(title: String, content: String, username: String, pool: &sqlx::PgPool) -> Result<i32, Box<dyn std::error::Error>> {
     let result = 
-            sqlx::query(
+            sqlx::query!(
                 "INSERT INTO posts (title, content, user_id)
-                    VALUES ($1, $2, (SELECT user_id FROM users WHERE username=$3))
-                    RETURNING id;")
-            .bind(title)
-            .bind(content)
-            .bind(username)
+                VALUES ($1, $2, (SELECT u.id FROM users u WHERE username=$3))
+                RETURNING id;",
+                title,
+                content,
+                username
+            )
             .fetch_one(pool)
             .await?;
-    Ok(result.get("postid"))
+    Ok(result.id)
 }
 
 pub async fn update(title: String, content: String, post_id: i32, pool: &sqlx::PgPool) -> Result<PgQueryResult, Box<dyn std::error::Error>> {
@@ -92,7 +93,17 @@ pub async fn get_posts_from_user(username: String, page: i64, pool: &sqlx::PgPoo
     Ok(result)
 }
 
-pub struct Instrument {
-    pub id: i32,
-    pub expiry_on: chrono::DateTime<chrono::Utc>,
+pub async fn check_if_user_can_edit_post(username: String, post_id: i32, pool: &sqlx::PgPool) -> Result<bool, sqlx::Error>  {
+    let result = 
+        sqlx::query!(
+        "SELECT exists (
+            SELECT 1 From posts p 
+            join users u on p.user_id = u.id
+            where u.username=$1 and p.id = $2
+        );",
+        username,
+        post_id)
+        .fetch_one(pool)
+        .await?;
+    Ok(result.exists.unwrap())
 }

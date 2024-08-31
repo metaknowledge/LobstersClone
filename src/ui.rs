@@ -1,6 +1,7 @@
 use std::env;
 
 use askama::Template;
+use poem::session::Session;
 use poem_openapi::param::Path;
 use poem_openapi::{ApiResponse, OpenApiService};
 use poem_openapi::OpenApi;
@@ -8,6 +9,7 @@ use poem_openapi::payload::{Html, PlainText};
 use sqlx::{Pool, Postgres};
 use poem::web::Data;
 use crate::api::posts::{self, Post};
+use crate::api::user_posts_api::{check_user_creds, ApiAuthResponse};
 use crate::api::users::{self, User};
 
 
@@ -63,6 +65,7 @@ impl UiApi {
         let html: String = PostTemplate{post: post}.render().map_err(poem::error::InternalServerError).unwrap();
         Html(html)
     }
+
     // async fn get_post_from_id(
     //     &self,
     //     Path(post_id): Path<String>,
@@ -93,9 +96,11 @@ impl UiApi {
     async fn user(
         &self,
         Path(user): Path<String>,
-    ) -> Html<String> {
+        session: &Session,
+        Data(pool): Data<&Pool<Postgres>>,
+    ) -> ApiAuthResponse {
         let usertemp = UserTempate{username: user}.render().map_err(poem::error::InternalServerError).unwrap();
-        Html(usertemp)
+        ApiAuthResponse::Ok(Html(usertemp))
     }
 
     #[oai(path="/users", method="get")]
@@ -111,14 +116,4 @@ impl UiApi {
             .unwrap();
         Html(userstemp)
     }
-
-    
 }
-
-pub fn get_service() -> OpenApiService<UiApi, ()> {
-    let api_service: OpenApiService<UiApi, ()> =
-        OpenApiService::new(UiApi, "Hello World", "1.0");
-    api_service
-    
-}
-

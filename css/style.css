@@ -78,3 +78,23 @@ h2 {
     font-size: medium;
     font-style: normal;
 }
+
+/* discord button */
+#discord-logo {
+    height: 2em;
+    height: 2em;
+    padding: 1em;
+}
+
+div.discord-link {
+    --burple: #5865F2;
+    border-radius: 0.5em;
+    width: 26em;
+    display: flex;
+    background-color: var(--burple);
+    align-items: center;
+}
+
+div.discord-link > a {
+    color: white;
+}

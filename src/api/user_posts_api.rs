@@ -1,36 +1,28 @@
 use askama::Template;
-use chrono::DateTime;
 use chrono::Local;
-use poem::middleware::AddData;
-use poem::web::cookie::Cookie;
-use poem::web::cookie::CookieJar;
+use poem::session::{self, Session};
 use poem::web::Data;
-use poem::web::Redirect;
-use poem::IntoResponse;
-use poem::Middleware;
 use poem_openapi::param::{Path, Query};
-use poem_openapi::types::ToJSON;
 use poem_openapi::ApiResponse;
 use poem_openapi::Object;
 use poem_openapi::{payload::PlainText, OpenApi};
 use reqwest::Response;
-use serde::Deserialize;
-use serde::Serialize;
 use sqlx::{Pool, Postgres};
 use poem_openapi::payload::{Html, Json};
 use crate::api::users;
+use crate::api::sessions;
 use crate::api::posts::{self, Post};
 use crate::api::routes::{UserDeleteResponse, Info};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, RedirectUrl, Scope, TokenResponse, TokenUrl
 };
 use oauth2::basic::BasicClient;
-use oauth2::reqwest::http_client;
-use url::Url;
+use oauth2;
 use super::routes::{CreatePostReponse, UserApiResponse};
 pub struct PostsApi;
-use std::env;
-use std::time::Duration;
+
+use poem::session::CookieConfig;
+
 
 #[derive(Object, Clone)]
 pub struct CreatePost {
@@ -93,21 +85,46 @@ pub fn build_oauth_client(client_id: String, client_secret: String) -> BasicClie
     .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
 }
 
-#[derive(Deserialize, sqlx::FromRow, Clone)]
-pub struct UserProfile {
-    email: String,
-    username: String,
+pub async fn check_user_creds(session: &Session, pool: &Pool<Postgres>) -> Result<sessions::UserProfile, ApiAuthResponse> {
+    let session_id = match session.get::<String>(SID) {
+        Some(cookie) => cookie,
+        None => return Err(ApiAuthResponse::Redirect("/signup".to_string())),
+    };
+    let res = match sessions::get(session_id, pool).await {
+        Ok(result) => result,
+        Err(err) => return Err(ApiAuthResponse::NotAuthorized)
+    };
+    Ok(res)
 }
+
+pub const SID: &str = "sid";
+
 
 #[derive(ApiResponse)]
 enum RedirectResponse {
-    #[oai(status = "301")]
+    #[oai(status = "307")]
     Redirect(#[oai(header = "Location")] String),
     #[oai(status = 400)]
     InvalidRequest(PlainText<String>),
 }
 
-#[OpenApi]
+#[derive(ApiResponse)]
+pub enum ApiAuthResponse {
+    #[oai(status = 200)]
+    Ok(Html<String>),
+    #[oai(status = "301")]
+    Redirect(#[oai(header = "Location")] String),
+    #[oai(status = 400)]
+    InvalidRequest(Html<String>),
+    #[oai(status = 404)]
+    NotFound,
+    #[oai(status = 401)]
+    NotAuthorized,
+}
+
+
+// #[OpenApi]
+#[OpenApi(prefix_path = "/api")]
 impl PostsApi {
     #[oai(path="/auth/discord/redirect", method="get")]
     async fn discord_auth(
@@ -115,8 +132,9 @@ impl PostsApi {
         Query(code): Query<String>,
         Data(pool): Data<&Pool<Postgres>>,
         Data(middle): Data<&BasicClient>,
-        cookie_jar: &CookieJar
-    ) -> RedirectResponse {
+        // cookie_jar: &CookieJar
+        session: &Session,
+    ) -> ApiAuthResponse {
         
         // let client: BasicClient = build_oauth_client(client_id, client_secret);
         let client: BasicClient = middle.clone();
@@ -130,28 +148,28 @@ impl PostsApi {
         let response: Response = ctx.get("https://discord.com/api/v10/users/@me")
             .bearer_auth(token.access_token().secret().to_owned())
             .send().await.unwrap();
-        let profile = response.json::<UserProfile>().await.unwrap();
-
-        println!("{}, {}", profile.username, profile.email);
-
+        let profile = response.json::<sessions::UserProfile>().await.unwrap();
         let Some(secs) = token.expires_in() else {
 
-            return RedirectResponse::InvalidRequest(PlainText("could not find token expiration".to_string()))
+            return ApiAuthResponse::InvalidRequest(Html("<p>could not find token expiration<p>".to_string()))
         };
-
-        
 
         let secs = secs.as_secs();
 
         let max_age = Local::now() + chrono::Duration::try_seconds(secs.try_into().unwrap()).unwrap();
-
-        let mut cookie = Cookie::new("sid", token.access_token().secret().to_owned());
-        cookie.set_domain(".app.localhost");
-        cookie.set_path("/");
-        cookie.set_secure(true);
-        cookie.set_http_only(true);
-        cookie.set_max_age(core::time::Duration::from_secs(secs));
         
+        // creates cookie
+        let cookie = CookieConfig::default()
+            .name(SID)
+            .domain("localhost")
+            .max_age(core::time::Duration::from_secs(secs));
+        
+        session.set(SID, token.access_token().secret());
+        
+        // cookie.set_cookie_value(cookie_jar, token.access_token().secret()); // adds it to the cookie jar
+        // println!("{}", cookie_jar.get(SID).unwrap().to_string());
+
+        // println!("{}", cookie.get_cookie_value(cookie_jar).unwrap());
 
         let _userid = sqlx::query!("insert into users (email, username) values ($1, $2) on conflict (username) do nothing;",
             profile.email, profile.username).execute(pool).await.unwrap();
@@ -163,7 +181,7 @@ impl PostsApi {
                  $2, $3)
                 ON CONFLICT (user_id) DO UPDATE SET
                 session_id = excluded.session_id,
-                expires_at = excluded.expires_at",
+                expires_at = excluded.expires_at;",
                 profile.email,
                 token.access_token().secret().to_owned(),
                 max_age
@@ -171,11 +189,22 @@ impl PostsApi {
             .execute(pool)
             .await.unwrap();
 
+        ApiAuthResponse::Redirect("/api/protected".to_string())
+    }
 
-        cookie_jar.add(cookie);
-
-
-        RedirectResponse::Redirect("/protected".to_string())
+    #[oai(path="/protected", method="get")]
+    async fn protected(
+        &self,
+        session: &Session,
+        Data(pool): Data<&Pool<Postgres>>,
+    ) -> ApiAuthResponse {
+        let res = match check_user_creds(session, pool).await {
+            Ok(res) => res,
+            Err(err) => return err,
+        };
+        ApiAuthResponse::Ok(
+            Html(format!("<p>email:{}, username:{}<p>", res.email, res.username))
+        )
     }
 
     #[oai(path="/html/posts", method="get")]
@@ -195,6 +224,7 @@ impl PostsApi {
         Html(html)
     }
 
+
     // get one post
     #[oai(path="/post/:post_id", method="get")]
     async fn get_post_from_id(
@@ -209,7 +239,7 @@ impl PostsApi {
     // create post
     #[oai(path="/post", method="post")]
     async fn post_post(
-        &self,        
+        &self,
         pool: Data<&Pool<Postgres>>,
         create_post: Json<CreatePost>
     ) -> CreatePostReponse {
@@ -221,7 +251,7 @@ impl PostsApi {
         match result {
             Ok(postid) => CreatePostReponse::Ok(Info::Info(PlainText(postid.to_string()))),
             Err(err) => CreatePostReponse::InvalidRequest(Info::Info(PlainText(err.to_string() + ": An error has occured")))
-        }   
+        }
     }
 
     // delete post
@@ -239,15 +269,23 @@ impl PostsApi {
     #[oai(path="/post/:post_id", method="put")]
     async fn update_post(
         &self,
-        pool: Data<&Pool<Postgres>>,
         Path(post_id): Path<i32>,
-        update_post: Json<UpdatePost>
-    ) -> Html<String> {
+        update_post: Json<UpdatePost>,
+        session: &Session,
+        Data(pool): Data<&Pool<Postgres>>,
+    ) -> ApiAuthResponse {
+        let user: sessions::UserProfile = match check_user_creds(session, pool).await {
+            Ok(res) => res,
+            Err(err) => return err,
+        };
+        if !posts::check_if_user_can_edit_post(user.username, post_id, pool).await.unwrap() {
+            return ApiAuthResponse::NotAuthorized;
+        }
         let title = update_post.title.clone();
         let content = update_post.content.clone();
         let result = posts::update(title.clone(), content.clone(), post_id, &pool).await.unwrap();        
         match result.rows_affected() {
-            0 => Html("could not update row".to_string()),
+            0 => ApiAuthResponse::InvalidRequest(Html("could not update row".to_string())),
             _ => {
                 let post = Post {
                     title: title,
@@ -259,14 +297,10 @@ impl PostsApi {
                     .render()
                     .map_err(poem::error::InternalServerError)
                     .unwrap();
-                Html(html)
+                ApiAuthResponse::Ok(Html(html))
             }
         }
     }
-    
-    // fn render_html(template: impl Template) -> String {
-    //     template.render().map_err(poem::error::InternalServerError("oh no")).unwrap()
-    // }
 
     #[oai(path="/post/:post_id/edit", method="get")]
     async fn edit_post_html(
@@ -287,8 +321,10 @@ impl PostsApi {
     async fn get_user_from_id(
         &self,
         Path(maybe_username): Path<Option<String>>,
-        pool: Data<&Pool<Postgres>>,
+        session: &Session,
+        Data(pool): Data<&Pool<Postgres>>,
     ) -> PlainText<String> {
+        
         match maybe_username {
             Some(username) => {
                 let user = users::read_username(username, &pool).await; 
@@ -302,23 +338,28 @@ impl PostsApi {
         }
     }
 
-    // get one user
+    // get posts associated with user: username
     #[oai(path="/user/posts/:username", method="get")]
     async fn get_user_posts(
         &self,
         Path(username): Path<String>,
         Query(page_number): Query<Option<i64>>,
-        pool: Data<&Pool<Postgres>>,
+        session: &Session,
+        Data(pool): Data<&Pool<Postgres>>,
     ) -> Html<String> {
         let page = match page_number {
             Some(page) => page,
             None => 0
         };
-        let posts: Vec<Post> = posts::get_posts_from_user(username, page, &pool).await.unwrap();        
+        let editable = match check_user_creds(session, pool).await {
+            Ok(res) => res.username == username,
+            Err(_) => false
+        };
+        let posts: Vec<Post> = posts::get_posts_from_user(username.clone(), page, pool).await.unwrap();        
         if posts.len() == 0 {
             return Html("You made it to the bottom".to_string())
         }
-        let html = PostsTemplate {posts: posts, page: page + 1, editable: true}
+        let html = PostsTemplate {posts: posts, page: page + 1, editable: editable}
             .render()
             .map_err(poem::error::InternalServerError)
             .unwrap();
@@ -368,12 +409,3 @@ impl PostsApi {
 
 
 }
-
-pub fn get_service() -> poem_openapi::OpenApiService<PostsApi, ()> {
-    let api_service =
-        poem_openapi::OpenApiService::new(PostsApi, "Hello World", "1.0");
-    api_service
-    
-}
-
-

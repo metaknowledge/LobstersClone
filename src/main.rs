@@ -1,10 +1,10 @@
 use api::user_posts_api::{self, build_oauth_client, PostsApi};
-use poem::{listener::TcpListener, middleware::{AddData, CookieJarManager}, EndpointExt, Route, Server};
+use poem::{listener::TcpListener, middleware::{AddData, CookieJarManager}, session::{CookieConfig, CookieSession}, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 use sqlx::{postgres::PgPool, Pool, Postgres};
+use ui::UiApi;
 use std::env;
 mod api;
-mod build;
 mod ui;
 
 #[tokio::main]
@@ -25,23 +25,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> {
     let client_id = env::var("CLIENT_ID").unwrap();
     let client_secret = env::var("CLIENT_SECRET").unwrap();
-    
-    let api_service: OpenApiService<PostsApi, ()> = user_posts_api::get_service()
-        .server(format!("https://localhost:{port}/api"));
-    let ui_service: OpenApiService<ui::UiApi, ()> = ui::get_service()
+    let api_service = OpenApiService::new((PostsApi, UiApi), "Hello World", "1.0")
         .server(format!("https://localhost:{port}/"));
+
+    // let api_service: OpenApiService<PostsApi, ()> = user_posts_api::get_service()
+    //     .server(format!("https://localhost:{port}/"));
+    // let ui_service: OpenApiService<ui::UiApi, ()> = ui::get_service()
+    //     .server(format!("https://localhost:{port}/"));
     let api_service_docs = api_service.swagger_ui();
     let app = Route::new()
-        .nest("/api", api_service)
-        .nest("api/docs", api_service_docs)
-        .nest("/", ui_service)
+        .nest("/", api_service)
+        .nest("/docs", api_service_docs)
+        // .nest("/", ui_service)
         .nest(
             "/static",
             poem::endpoint::StaticFilesEndpoint::new("./css/").show_files_listing(),
         )
         .data(pool)
         .with(AddData::new(build_oauth_client(client_id, client_secret)))
-        .with(CookieJarManager::new());
+        // .with(CookieJarManager::new());
+        .with(CookieSession::new(CookieConfig::default()));
 
     Server::new(TcpListener::bind(format!("127.0.0.1:{port}")))
         .run(app)
