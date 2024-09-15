@@ -27,11 +27,6 @@ async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn 
     let client_secret = env::var("CLIENT_SECRET").unwrap();
     let api_service = OpenApiService::new((PostsApi, UiApi), "Hello World", "1.0")
         .server(format!("https://localhost:{port}/"));
-
-    // let api_service: OpenApiService<PostsApi, ()> = user_posts_api::get_service()
-    //     .server(format!("https://localhost:{port}/"));
-    // let ui_service: OpenApiService<ui::UiApi, ()> = ui::get_service()
-    //     .server(format!("https://localhost:{port}/"));
     let api_service_docs = api_service.swagger_ui();
     let app = Route::new()
         .nest("/", api_service)
@@ -39,13 +34,14 @@ async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn 
         // .nest("/", ui_service)
         .nest(
             "/static",
-            poem::endpoint::StaticFilesEndpoint::new("./css/").show_files_listing(),
+            poem::endpoint::StaticFilesEndpoint::new("./css").show_files_listing(),
         )
         .data(pool)
         .with(AddData::new(build_oauth_client(client_id, client_secret)))
         // .with(CookieJarManager::new());
         .with(CookieSession::new(CookieConfig::default()));
 
+    println!("server started!");
     Server::new(TcpListener::bind(format!("127.0.0.1:{port}")))
         .run(app)
         .await?;

@@ -2,7 +2,7 @@
 
 
 {% block content %}
-<form hx-post="api/user" hx-ext="json-enc" hx-target="#test">
+<!-- <form hx-post="api/user" hx-ext="json-enc" hx-target="#test">
     <label for="username">username:</label>
     <input type="text" name="username" id="username" required>
     <label for="email">email:</label>
@@ -10,10 +10,12 @@
     <label for="password">password:</label>
     <input type="password" name="password" id="password" required>
     <input type="submit" value="Submit">
-</form>
-<p id="test"></p>
-<div class="discord-link">
-    <img id="discord-logo" src="static/images/discord-mark-white.png" alt="discord logo">
-    <a href="https://discord.com/oauth2/authorize?client_id=1278123550145904721&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fdiscord%2Fredirect&scope=identify+guilds+gdm.join+email+guilds.join+connections">Click here to login with Discord!</a>
-</div>
+</form> -->
+<a href="https://discord.com/oauth2/authorize?client_id=1278123550145904721&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fdiscord%2Fredirect&scope=identify+guilds+gdm.join+email+guilds.join+connections"> 
+    <div class="discord-link">
+        <img id="discord-logo" src="static/images/discord-mark-white.png" alt="discord logo">
+        <p>Sign Up with Discord</p>
+    </div>
+</a>
+
 {% endblock %}

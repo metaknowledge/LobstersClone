@@ -88,7 +88,8 @@ pub fn build_oauth_client(client_id: String, client_secret: String) -> BasicClie
 pub async fn check_user_creds(session: &Session, pool: &Pool<Postgres>) -> Result<sessions::UserProfile, ApiAuthResponse> {
     let session_id = match session.get::<String>(SID) {
         Some(cookie) => cookie,
-        None => return Err(ApiAuthResponse::Redirect("/signup".to_string())),
+        // None => return Err(ApiAuthResponse::Redirect("/signup".to_string())),
+        None => return Err(ApiAuthResponse::Redirect("/signup".to_string()))
     };
     let res = match sessions::get(session_id, pool).await {
         Ok(result) => result,
@@ -112,7 +113,7 @@ enum RedirectResponse {
 pub enum ApiAuthResponse {
     #[oai(status = 200)]
     Ok(Html<String>),
-    #[oai(status = "301")]
+    #[oai(status = 302)]
     Redirect(#[oai(header = "Location")] String),
     #[oai(status = 400)]
     InvalidRequest(Html<String>),
@@ -320,21 +321,14 @@ impl PostsApi {
     #[oai(path="/user/:maybe_username", method="get")]
     async fn get_user_from_id(
         &self,
-        Path(maybe_username): Path<Option<String>>,
-        session: &Session,
+        Path(username): Path<String>,
         Data(pool): Data<&Pool<Postgres>>,
     ) -> PlainText<String> {
         
-        match maybe_username {
-            Some(username) => {
-                let user = users::read_username(username, &pool).await; 
-                match user {
-                Ok(user) => PlainText(user.to_string()),
-                Err(error) => PlainText(error.to_string() + ": Error please fix")
-                }
-                
-            },
-            None => PlainText("No username provided".to_string())
+        let user = users::read_username(username, &pool).await; 
+        match user {
+            Ok(user) => PlainText(user.to_string()),
+            Err(error) => PlainText(error.to_string() + ": Error please fix")
         }
     }
 
