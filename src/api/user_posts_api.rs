@@ -139,6 +139,7 @@ impl PostsApi {
         
         // let client: BasicClient = build_oauth_client(client_id, client_secret);
         let client: BasicClient = middle.clone();
+        println!("{}", code);
         let token = client.exchange_code(AuthorizationCode::new(code.clone()))
             .request_async(oauth2::reqwest::async_http_client)
             .await.expect("should have got code");

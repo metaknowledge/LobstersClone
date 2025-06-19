@@ -10,7 +10,7 @@ mod ui;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = connect_postgresql_server().await?;
-
+    
     let port = match env::var("PORT") {
         Ok(port) => port,
         Err(err) => {

@@ -1,5 +1,3 @@
-use std::env;
-
 use askama::Template;
 use poem::session::Session;
 use poem_openapi::param::Path;
