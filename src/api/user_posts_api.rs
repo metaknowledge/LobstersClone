@@ -1,6 +1,6 @@
 use askama::Template;
 use chrono::Local;
-use poem::session::{self, Session};
+use poem::session::{Session};
 use poem::web::Data;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::ApiResponse;
@@ -14,11 +14,11 @@ use crate::api::sessions;
 use crate::api::posts::{self, Post};
 use crate::api::routes::{UserDeleteResponse, Info};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, RedirectUrl, Scope, TokenResponse, TokenUrl
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, RedirectUrl, TokenResponse, TokenUrl
 };
 use oauth2::basic::BasicClient;
 use oauth2;
-use super::routes::{CreatePostReponse, UserApiResponse};
+use super::routes::CreatePostReponse;
 pub struct PostsApi;
 
 use poem::session::CookieConfig;

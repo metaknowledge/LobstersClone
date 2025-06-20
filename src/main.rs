@@ -1,5 +1,5 @@
-use api::user_posts_api::{self, build_oauth_client, PostsApi};
-use poem::{listener::TcpListener, middleware::{AddData, CookieJarManager}, session::{CookieConfig, CookieSession}, EndpointExt, Route, Server};
+use api::user_posts_api::{build_oauth_client, PostsApi};
+use poem::{listener::TcpListener, middleware::AddData, session::{CookieConfig, CookieSession}, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 use sqlx::{postgres::PgPool, Pool, Postgres};
 use ui::UiApi;

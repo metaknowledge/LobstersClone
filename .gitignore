@@ -3,6 +3,7 @@ shell.nix
 Cargo.lock
 .env
 config.toml
+.sqlx/*
 # Added by cargo
 /target
 /.sqlx

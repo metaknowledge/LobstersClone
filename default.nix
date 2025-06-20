@@ -25,12 +25,12 @@ stdenv.mkDerivation {
     source ./.env
   '';
 
-  buildPhase = "cargo";
+  buildPhase = "cargo build";
 
   installPhase = ''
     echo $out
     mkdir -p $out
-    mv build/final_program $out/bin
+    mv ./target/debug/straight_line $out/straght_line
   '';
 }
 

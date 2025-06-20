@@ -1,13 +1,13 @@
 use askama::Template;
 use poem::session::Session;
 use poem_openapi::param::Path;
-use poem_openapi::{ApiResponse, OpenApiService};
+use poem_openapi::ApiResponse;
 use poem_openapi::OpenApi;
-use poem_openapi::payload::{Html, PlainText};
+use poem_openapi::payload::Html;
 use sqlx::{Pool, Postgres};
 use poem::web::Data;
 use crate::api::posts::{self, Post};
-use crate::api::user_posts_api::{check_user_creds, ApiAuthResponse};
+use crate::api::user_posts_api::ApiAuthResponse;
 use crate::api::users::{self, User};
 
 
