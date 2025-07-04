@@ -2,7 +2,8 @@
 
 I wanted to use Rust and postgres to create a forum app in the summer of 2024.
 
-## Stack
+## "The Stack"
+Based on NoBoilerplate's video on a rust stack
  - Sqlx + postgres
  - poem-openapi
  - askama
