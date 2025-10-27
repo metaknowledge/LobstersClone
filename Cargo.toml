@@ -9,7 +9,7 @@ edition = "2021"
 askama = "0.12.1"
 chrono = "0.4.38"
 futures = "0.3.30"
-oauth2 = "4.4.2"
+oauth2 = { version = "5.0.0", features = ["reqwest-blocking"] }
 poem = { version = "3.0.4", features = ["session", "static-files"] }
 poem-openapi = {version = "5.0.3", features = ["swagger-ui"]}
 reqwest = { version = "0.12.7", features = ["json"] }

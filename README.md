@@ -11,4 +11,6 @@ Based on NoBoilerplate's video on a rust stack
  
  Postgres holds all the user information. Poem is the backend for serving html, while askama is a templating framework rendering simple html templates. The html template + htmx is just a great pair for making web apps. No need for javascript frameworks. 
 
+## Build
+
 ![image of the website in action](css/images/screenshot.png)

@@ -1,7 +1,6 @@
 
 use sqlx::prelude::FromRow;
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use sqlx::types::chrono::DateTime;
 use sqlx::types::chrono::Local;
 

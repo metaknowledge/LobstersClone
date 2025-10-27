@@ -4,7 +4,6 @@ use sqlx::postgres::PgQueryResult;
 use sqlx::prelude::FromRow;
 use serde::{Deserialize, Serialize};
 use poem_openapi::Object;
-use sqlx::Row;
 
 #[derive(Default, Debug, FromRow, Serialize, Deserialize, Object)]
 pub struct Post {

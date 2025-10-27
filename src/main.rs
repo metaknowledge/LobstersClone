@@ -25,6 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn std::error::Error>> {
     let client_id = env::var("CLIENT_ID").unwrap();
     let client_secret = env::var("CLIENT_SECRET").unwrap();
+    println!("client_id: {}, client_secret: {}", client_id, client_secret);
     let api_service = OpenApiService::new((PostsApi, UiApi), "Hello World", "1.0")
         .server(format!("https://localhost:{port}/"));
     let api_service_docs = api_service.swagger_ui();
@@ -49,9 +50,10 @@ async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn 
 }
 
 async fn connect_postgresql_server() -> Result<Pool<Postgres>, Box<dyn std::error::Error>> {
-    // let url = env::var("DATABASE_URL").unwrap();
-    let url = "postgres://postgres:password@localhost:5432/new_database";
-    let pool: Pool<Postgres> = PgPool::connect(url).await?;
+    let url = env::var("DATABASE_URL").unwrap();
+    println!("database_url: {url}");
+    // let url = "postgres://postgres:password@localhost:5432/new_database";
+    let pool: Pool<Postgres> = PgPool::connect(&url).await?;
     sqlx::migrate!("./migrations")
         .run(&pool).await?;
     Ok(pool)

@@ -16,13 +16,14 @@ use crate::api::routes::{UserDeleteResponse, Info};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, RedirectUrl, TokenResponse, TokenUrl
 };
+use oauth2::AuthType;
 use oauth2::basic::BasicClient;
 use oauth2;
 use super::routes::CreatePostReponse;
 pub struct PostsApi;
 
 use poem::session::CookieConfig;
-
+use std::env;
 
 #[derive(Object, Clone)]
 pub struct CreatePost {
@@ -68,7 +69,7 @@ struct EditPostTemplate {
     pub content: String,
 }
 
-pub fn build_oauth_client(client_id: String, client_secret: String) -> BasicClient {
+pub fn build_oauth_client(client_id: String, client_secret: String) {
     let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
     
     let auth_url = AuthUrl::new("https://discord.com/oauth2/authorize".to_string())
@@ -76,13 +77,11 @@ pub fn build_oauth_client(client_id: String, client_secret: String) -> BasicClie
     let token_url = TokenUrl::new("https://discord.com/api/oauth2/token".to_string())
         .expect("Wrong token url");
     
-    BasicClient::new(
-        ClientId::new(client_id),
-        Some(ClientSecret::new(client_secret)),
-        auth_url,
-        Some(token_url),
-    )
-    .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
+    BasicClient::new(ClientId::new(client_id))
+        .set_client_secret(ClientSecret::new(client_secret))
+        .set_auth_uri(auth_url)
+        .set_token_uri(token_url)
+        .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap());
 }
 
 pub async fn check_user_creds(session: &Session, pool: &Pool<Postgres>) -> Result<sessions::UserProfile, ApiAuthResponse> {
@@ -93,7 +92,7 @@ pub async fn check_user_creds(session: &Session, pool: &Pool<Postgres>) -> Resul
     };
     let res = match sessions::get(session_id, pool).await {
         Ok(result) => result,
-        Err(err) => return Err(ApiAuthResponse::NotAuthorized)
+        Err(_err) => return Err(ApiAuthResponse::NotAuthorized)
     };
     Ok(res)
 }
@@ -101,13 +100,13 @@ pub async fn check_user_creds(session: &Session, pool: &Pool<Postgres>) -> Resul
 pub const SID: &str = "sid";
 
 
-#[derive(ApiResponse)]
-enum RedirectResponse {
-    #[oai(status = "307")]
-    Redirect(#[oai(header = "Location")] String),
-    #[oai(status = 400)]
-    InvalidRequest(PlainText<String>),
-}
+// #[derive(ApiResponse)]
+// enum RedirectResponse {
+//     #[oai(status = "307")]
+//     Redirect(#[oai(header = "Location")] String),
+//     #[oai(status = 400)]
+//     InvalidRequest(PlainText<String>),
+// }
 
 #[derive(ApiResponse)]
 pub enum ApiAuthResponse {
@@ -132,18 +131,43 @@ impl PostsApi {
         &self,
         Query(code): Query<String>,
         Data(pool): Data<&Pool<Postgres>>,
-        Data(middle): Data<&BasicClient>,
+        // Data(middle): Data<&BasicClient>,
         // cookie_jar: &CookieJar
         session: &Session,
     ) -> ApiAuthResponse {
+        let client_id = env::var("CLIENT_ID").unwrap();
+        let client_secret = env::var("CLIENT_SECRET").unwrap();
+        let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
         
-        // let client: BasicClient = build_oauth_client(client_id, client_secret);
-        let client: BasicClient = middle.clone();
-        println!("{}", code);
-        let token = client.exchange_code(AuthorizationCode::new(code.clone()))
-            .request_async(oauth2::reqwest::async_http_client)
-            .await.expect("should have got code");
-        // println!("done".to_string());
+        let auth_url = AuthUrl::new("https://discord.com/oauth2/authorize".to_string())
+            .expect("Wrong auth endpoint");
+        let token_url = TokenUrl::new("https://discord.com/api/oauth2/token".to_string())
+            .expect("Wrong token url");
+        
+        let client = BasicClient::new(ClientId::new(client_id))
+            .set_auth_type(AuthType::RequestBody)
+            .set_client_secret(ClientSecret::new(client_secret))
+            .set_auth_uri(auth_url)
+            .set_token_uri(token_url)
+            .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap());
+
+        // let http_c: BasicClient = middle.clone();
+            // Following redirects opens the client up to SSRF vulnerabilities.
+        // let http_client = reqwest::blocking::ClientBuilder::new()
+        //     .redirect(reqwest::redirect::Policy::none())
+        //     .build()
+        //     .expect("Client should build");
+
+        let http_client = reqwest::ClientBuilder::new()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("Client should build");
+        let token = match client.exchange_code(AuthorizationCode::new(code.clone()))
+                .request_async(&http_client).await {
+            Ok(token) => token,
+            Err(e) => return ApiAuthResponse::InvalidRequest(Html(e.to_string() + "<p>something went wrong trying to parse your auth token<p>"))
+        };
+        println!("done");
         
         
         let ctx = reqwest::Client::new();

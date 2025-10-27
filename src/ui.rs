@@ -94,8 +94,8 @@ impl UiApi {
     async fn user(
         &self,
         Path(user): Path<String>,
-        session: &Session,
-        Data(pool): Data<&Pool<Postgres>>,
+        _session: &Session,
+        Data(_pool): Data<&Pool<Postgres>>,
     ) -> ApiAuthResponse {
         let usertemp = UserTempate{username: user}.render().map_err(poem::error::InternalServerError).unwrap();
         ApiAuthResponse::Ok(Html(usertemp))
