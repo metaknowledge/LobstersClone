@@ -70,7 +70,8 @@ struct EditPostTemplate {
 }
 
 pub fn build_oauth_client(client_id: String, client_secret: String) {
-    let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
+    // let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
+    let redirect_url = env::var("REDIRECT_URL").unwrap();
     
     let auth_url = AuthUrl::new("https://discord.com/oauth2/authorize".to_string())
         .expect("Wrong auth endpoint");
@@ -132,12 +133,13 @@ impl PostsApi {
         Query(code): Query<String>,
         Data(pool): Data<&Pool<Postgres>>,
         // Data(middle): Data<&BasicClient>,
-        // cookie_jar: &CookieJar
+        //cookie_jar: &CookieJar
         session: &Session,
     ) -> ApiAuthResponse {
         let client_id = env::var("CLIENT_ID").unwrap();
         let client_secret = env::var("CLIENT_SECRET").unwrap();
-        let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
+        // let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
+        let redirect_url = env::var("REDIRECT_URL").unwrap();
         
         let auth_url = AuthUrl::new("https://discord.com/oauth2/authorize".to_string())
             .expect("Wrong auth endpoint");
@@ -162,10 +164,12 @@ impl PostsApi {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .expect("Client should build");
-        let token = match client.exchange_code(AuthorizationCode::new(code.clone()))
-                .request_async(&http_client).await {
+        println!("{code}");
+        let request = client.exchange_code(AuthorizationCode::new(code.clone()));
+        println!("{:?}", request);
+        let token = match request.request_async(&http_client).await {
             Ok(token) => token,
-            Err(e) => return ApiAuthResponse::InvalidRequest(Html(e.to_string() + "<p>something went wrong trying to parse your auth token<p>"))
+            Err(e) => return ApiAuthResponse::InvalidRequest(Html(e.to_string() + "<p>something went wrong trying to exchange the code for a token<p>"))
         };
         println!("done");
         
@@ -185,7 +189,7 @@ impl PostsApi {
         let max_age = Local::now() + chrono::Duration::try_seconds(secs.try_into().unwrap()).unwrap();
         
         // creates cookie
-        let cookie = CookieConfig::default()
+        let _cookie = CookieConfig::default()
             .name(SID)
             .domain("localhost")
             .max_age(core::time::Duration::from_secs(secs));
