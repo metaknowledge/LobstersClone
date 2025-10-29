@@ -185,7 +185,7 @@ impl PostsApi {
         let max_age = Local::now() + chrono::Duration::try_seconds(secs.try_into().unwrap()).unwrap();
         
         // creates cookie
-        let cookie = CookieConfig::default()
+        let _cookie = CookieConfig::default()
             .name(SID)
             .domain("localhost")
             .max_age(core::time::Duration::from_secs(secs));

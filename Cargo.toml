@@ -18,8 +18,3 @@ sqlx = { version = "0.8.0", features = ["postgres", "runtime-tokio-rustls", "mac
 tokio = {version = "1.39.2", features = ["full"]}
 url = "2.5.2"
 
-[profile.dev]
-opt-level = 1
-
-[profile.dev.package."*"]
-opt-level = 3

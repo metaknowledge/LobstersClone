@@ -1,9 +1,8 @@
 # look up rust nix.shell for nix shell build script
 shell.nix
-Cargo.lock
 .env
-config.toml
 # Added by cargo
+Cargo.lock
 /target
-/.sqlx
 /.vscode
+.sqlx/
