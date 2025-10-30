@@ -127,6 +127,8 @@ pub enum ApiAuthResponse {
 // #[OpenApi]
 #[OpenApi(prefix_path = "/api")]
 impl PostsApi {
+    // Handles the response from discord oauth
+    // added the user to the session database and redirects to their profile
     #[oai(path="/auth/discord/redirect", method="get")]
     async fn discord_auth(
         &self,
@@ -222,6 +224,7 @@ impl PostsApi {
         ApiAuthResponse::Redirect("/me".to_string())
     }
 
+    // Responds with the user's email and username from discord
     #[oai(path="/protected", method="get")]
     async fn protected(
         &self,
@@ -237,7 +240,7 @@ impl PostsApi {
         )
     }
 
-
+    // queries the database based on the page number, pages are 10 posts long
     #[oai(path="/html/posts", method="get")]
     async fn get_paged_html(
         &self,
