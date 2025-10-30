@@ -71,7 +71,7 @@ struct EditPostTemplate {
 
 pub fn build_oauth_client(client_id: String, client_secret: String) {
     // let redirect_url = "http://localhost:3000/api/auth/discord/redirect".to_string();
-    let redirect_url = env::var("REDIRECT_URL").unwrap();
+    let redirect_url = env::var("REDIRECT_URL").expect("couldn't find REDIRECT_URL");
     
     let auth_url = AuthUrl::new("https://discord.com/oauth2/authorize".to_string())
         .expect("Wrong auth endpoint");

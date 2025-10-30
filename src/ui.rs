@@ -9,6 +9,7 @@ use poem::web::Data;
 use crate::api::posts::{self, Post};
 use crate::api::user_posts_api::ApiAuthResponse;
 use crate::api::users::{self, User};
+use std::env;
 
 
 #[derive(Template)]
@@ -23,12 +24,15 @@ struct PostTemplate {
 
 #[derive(Template)]
 #[template(path = "signup.html")]
-struct SignupTemplate;
+struct SignupTemplate{
+    pub link: String
+}
 
 #[derive(Template)]
 #[template(path = "user.html")]
 struct UserTempate {
     pub username: String,
+    pub editable: bool,
 }
 
 #[derive(Template)]
@@ -50,6 +54,12 @@ pub enum UiReponse {
 }
 
 pub struct UiApi;
+
+fn get_user_html(user: String, editable: bool) -> ApiAuthResponse {
+
+    let usertemp = UserTempate{username: user, editable:editable}.render().map_err(poem::error::InternalServerError).unwrap();
+    ApiAuthResponse::Ok(Html(usertemp))
+}
 
 #[OpenApi]
 impl UiApi {
@@ -86,7 +96,7 @@ impl UiApi {
     async fn signup(
         &self,
     ) -> Html<String> {
-        let home = SignupTemplate.render().map_err(poem::error::InternalServerError).unwrap();
+        let home = SignupTemplate{link: env::var("DISCORD_LINK").expect("could not find discord link env var") }.render().map_err(poem::error::InternalServerError).unwrap();
         Html(home)
     }
 
@@ -94,12 +104,29 @@ impl UiApi {
     async fn user(
         &self,
         Path(user): Path<String>,
-        _session: &Session,
-        Data(_pool): Data<&Pool<Postgres>>,
+        session: &Session,
+        Data(pool): Data<&Pool<Postgres>>,
     ) -> ApiAuthResponse {
-        let usertemp = UserTempate{username: user}.render().map_err(poem::error::InternalServerError).unwrap();
-        ApiAuthResponse::Ok(Html(usertemp))
+        let editable = match crate::api::user_posts_api::check_user_creds(session, pool).await {
+            Ok(res) => res.username == user,
+            Err(_) => false
+        };
+        get_user_html(user, editable)
     }
+    
+    #[oai(path="/me", method="get")]
+    async fn me(
+        &self,
+        session: &Session,
+        Data(pool): Data<&Pool<Postgres>>,
+    ) -> ApiAuthResponse {
+        let (username, editable) = match crate::api::user_posts_api::check_user_creds(session, pool).await {
+            Ok(res) => (res.username, true),
+            Err(_) => return ApiAuthResponse::Redirect("/signup".to_string())
+        };
+        get_user_html(username, editable)
+    }
+
 
     #[oai(path="/users", method="get")]
     async fn users(
