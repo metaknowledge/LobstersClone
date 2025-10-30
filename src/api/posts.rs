@@ -58,7 +58,7 @@ pub async fn read_page_number(page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post
             FROM posts p 
             JOIN users u 
             ON p.user_id = u.id
-            ORDER BY p.id
+            ORDER BY p.id DESC
             LIMIT 10
             OFFSET $1
             ;", page * 10

@@ -237,6 +237,7 @@ impl PostsApi {
         )
     }
 
+
     #[oai(path="/html/posts", method="get")]
     async fn get_paged_html(
         &self,
