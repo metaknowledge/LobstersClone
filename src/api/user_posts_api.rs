@@ -219,7 +219,7 @@ impl PostsApi {
             .execute(pool)
             .await.unwrap();
 
-        ApiAuthResponse::Redirect("/api/protected".to_string())
+        ApiAuthResponse::Redirect("/me".to_string())
     }
 
     #[oai(path="/protected", method="get")]

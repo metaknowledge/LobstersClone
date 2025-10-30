@@ -9,7 +9,13 @@ mod ui;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = connect_postgresql_server().await?;
+    let pool = match connect_postgresql_server().await {
+        Ok(pool) => pool,
+        Err(err) => {
+            println!("an error occurred when connecting to database");
+            return Err(err);
+        }
+    };
     
     let port = match env::var("PORT") {
         Ok(port) => port,
@@ -43,11 +49,11 @@ async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn 
         // .with(CookieJarManager::new());
         .with(CookieSession::new(CookieConfig::default().secure(false)));
 
-
+    println!("server started!");
     Server::new(TcpListener::bind(format!("127.0.0.1:{port}")))
         .run(app)
         .await?;
-    println!("server started!");
+    
 
     Ok(())
 }
@@ -56,7 +62,7 @@ async fn connect_postgresql_server() -> Result<Pool<Postgres>, Box<dyn std::erro
     let url = env::var("DATABASE_URL").unwrap();
     println!("database_url: {url}");
     // let url = "postgres://postgres:password@localhost:5432/new_database";
-    let pool: Pool<Postgres> = PgPool::connect(&url).await?;
+    let pool: Pool<Postgres> = tokio::time::timeout(tokio::time::Duration::from_secs(2), PgPool::connect(&url)).await??;
     sqlx::migrate!("./migrations")
         .run(&pool).await?;
     Ok(pool)
