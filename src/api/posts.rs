@@ -11,6 +11,8 @@ pub struct Post {
     pub username: String,
     pub title: String,
     pub content: String,
+    #[sqlx(default)]
+    pub link: Option<String>
 }
 
 
@@ -54,7 +56,7 @@ pub async fn delete(post_id: i32, pool: &sqlx::PgPool) -> Result<PgQueryResult, 
 pub async fn read_page_number(page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(Post,
-            "SELECT p.title, p.content, p.id, u.username
+            "SELECT p.title, p.content, p.id, u.username, p.link
             FROM posts p 
             JOIN users u 
             ON p.user_id = u.id
@@ -71,7 +73,7 @@ pub async fn read_page_number(page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post
 pub async fn read_from_id(post_id: i32, pool: &sqlx::PgPool) -> Result<Post, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(Post,
-            "SELECT p.title, p.content, p.id, u.username FROM Posts p JOIN users u ON p.user_id = u.id WHERE p.id=$1;", post_id)
+            "SELECT p.title, p.content, p.id, u.username, p.link FROM Posts p JOIN users u ON p.user_id = u.id WHERE p.id=$1;", post_id)
             .fetch_one(pool).await?;
     Ok(result)
 }
@@ -79,7 +81,7 @@ pub async fn read_from_id(post_id: i32, pool: &sqlx::PgPool) -> Result<Post, Box
 pub async fn get_posts_from_user(username: String, page: i64, pool: &sqlx::PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
     let result = 
         sqlx::query_as!(Post,
-            "SELECT p.title, p.content, p.id, u.username
+            "SELECT p.title, p.content, p.id, u.username, p.link
             FROM Posts p
             JOIN users u
             ON p.user_id = u.id

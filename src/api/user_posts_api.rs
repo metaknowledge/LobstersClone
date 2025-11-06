@@ -9,10 +9,9 @@ use poem_openapi::{payload::PlainText, OpenApi};
 use reqwest::Response;
 use sqlx::{Pool, Postgres};
 use poem_openapi::payload::{Html, Json};
-use crate::api::users;
-use crate::api::sessions;
-use crate::api::posts::{self, Post};
-use crate::api::routes::{UserDeleteResponse, Info};
+
+
+
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, RedirectUrl, TokenResponse, TokenUrl
 };
@@ -21,9 +20,15 @@ use oauth2::basic::BasicClient;
 use oauth2;
 use super::routes::CreatePostReponse;
 pub struct PostsApi;
+pub struct AuthApi;
 
 use poem::session::CookieConfig;
 use std::env;
+
+use crate::api::users;
+use crate::api::sessions;
+use crate::api::posts::{self, Post};
+use crate::api::routes::{UserDeleteResponse, Info};
 
 #[derive(Object, Clone)]
 pub struct CreatePost {
@@ -123,10 +128,8 @@ pub enum ApiAuthResponse {
     NotAuthorized,
 }
 
-
-// #[OpenApi]
 #[OpenApi(prefix_path = "/api")]
-impl PostsApi {
+impl AuthApi {
     // Handles the response from discord oauth
     // added the user to the session database and redirects to their profile
     #[oai(path="/auth/discord/redirect", method="get")]
@@ -223,7 +226,11 @@ impl PostsApi {
 
         ApiAuthResponse::Redirect("/me".to_string())
     }
+}
 
+// #[OpenApi]
+#[OpenApi(prefix_path = "/api")]
+impl PostsApi {
     // Responds with the user's email and username from discord
     #[oai(path="/protected", method="get")]
     async fn protected(
@@ -325,7 +332,8 @@ impl PostsApi {
                     title: title,
                     id: post_id,
                     username: String::new(),
-                    content: content
+                    content: content,
+                    ..Default::default()
                 };
                 let html = PostTemplate {post: post, editable: true, i: 0}
                     .render()

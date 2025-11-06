@@ -1,4 +1,4 @@
-use api::user_posts_api::{build_oauth_client, PostsApi};
+use api::user_posts_api::{build_oauth_client, PostsApi, AuthApi};
 use poem::{listener::TcpListener, middleware::AddData, session::{CookieConfig, CookieSession}, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 use sqlx::{postgres::PgPool, Pool, Postgres};
@@ -32,7 +32,7 @@ async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn 
     let client_id = env::var("CLIENT_ID").unwrap();
     let client_secret = env::var("CLIENT_SECRET").unwrap();
     println!("client_id: {}, client_secret: {}", client_id, client_secret);
-    let api_service = OpenApiService::new((PostsApi, UiApi), "Hello World", "1.0")
+    let api_service = OpenApiService::new((PostsApi, AuthApi, UiApi), "Hello World", "1.0")
         .server(format!("http://3.129.66.167/"));
     let api_service_docs = api_service.swagger_ui();
     let app = Route::new()
