@@ -8,7 +8,7 @@ use sqlx::{Pool, Postgres};
 use poem::web::Data;
 
 use crate::api::posts::{self, Post};
-use crate::api::user_posts_api::ApiAuthResponse;
+use crate::api::utils::ApiAuthResponse;
 use crate::api::users::{self, User};
 use std::env;
 
@@ -108,7 +108,7 @@ impl UiApi {
         session: &Session,
         Data(pool): Data<&Pool<Postgres>>,
     ) -> ApiAuthResponse {
-        let editable = match crate::api::user_posts_api::check_user_creds(session, pool).await {
+        let editable = match crate::api::utils::check_user_creds(session, pool).await {
             Ok(res) => res.username == user,
             Err(_) => false
         };
@@ -121,7 +121,7 @@ impl UiApi {
         session: &Session,
         Data(pool): Data<&Pool<Postgres>>,
     ) -> ApiAuthResponse {
-        let (username, editable) = match crate::api::user_posts_api::check_user_creds(session, pool).await {
+        let (username, editable) = match crate::api::utils::check_user_creds(session, pool).await {
             Ok(res) => (res.username, true),
             Err(_) => return ApiAuthResponse::Redirect("/signup".to_string())
         };
