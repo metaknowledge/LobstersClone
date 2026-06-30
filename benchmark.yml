@@ -1,0 +1,14 @@
+---
+
+concurrency: 8
+base: 'http://localhost:3000'
+iterations: 1000
+rampup: 10
+
+plan:
+  - name: Fetch some users
+    request:
+      url: /api/post/{{ item }}
+    with_items_range:
+      start: 1
+      stop: 11

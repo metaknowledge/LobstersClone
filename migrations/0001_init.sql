@@ -1,4 +1,3 @@
-
 create table if not exists users (
     id int generated always as identity,
     username varchar(30) not null unique,

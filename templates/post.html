@@ -1,24 +1,23 @@
 {% if editable %}
-<div hx-target="this" hx-swap="outerHTML" class="item">
+<li hx-target="this" hx-swap="outerHTML">
 {% else %}
-<div class="item">
+<li>
 {% endif %}
-    <!--<div class="index">
-        {{i}}
-	</div> --!>
-    <div class="content">
-        <h2><a href="/post/{{post.id}}">{{post.title}}</a></h2>
-        <div>
-            {% if editable %}
-            <button hx-get="/api/post/{{post.id}}/edit" class="btn primary">
-                Click To Edit
-            </button>
-            <button hx-delete="/api/post/{{post.id}}" hx-swap="innterHTML" class="btn primary" hx-confirm="Are you sure?">
-                Delete
-            </button>
-            {% else %}
-            <p><a href="/user/{{post.username}}">{{post.username}}</a></p>
-            {% endif %}
-        </div>
-    </div>
-</div>
+  <a class="upvote" href="/login">0</a>
+  {% if let Some(link) = post.link %}
+  <p id="title"><a href="{{link}}">{{post.title}}</a></p>
+  {% else %}
+    <p id="title"><a href="/post/{{post.id}}">{{post.title}}</a></p>
+  {% endif %}
+
+  {% if editable %}
+  <button hx-get="/api/post/{{post.id}}/edit" class="btn primary">
+      Click To Edit
+  </button>
+  <button hx-delete="/api/post/{{post.id}}" hx-swap="innterHTML" class="btn primary" hx-confirm="Are you sure?">
+      Delete
+  </button>
+  {% else %}
+  <p id="extra"><a id="user" href="/user/{{post.username}}">{{post.username}}</a> | <a id="post" href="/post/{{post.id}}">comments</a></p>
+  {% endif %}
+</li>

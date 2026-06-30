@@ -7,7 +7,7 @@
 
 <!-- <button hx-target="#me" hx-post="/post" hx-vals='{"user_id": 5, "title": "test", "content": "test"}'>Submit</button>
 <p id="me"></p> -->
-<div class="container">
+<ol>
     <div hx-get='/api/html/posts?page=0' hx-trigger="revealed" hx-swap="outerHTML"></div>
-</div>
+</ol>
 {% endblock %}

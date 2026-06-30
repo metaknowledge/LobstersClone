@@ -22,40 +22,42 @@ body {
     --cornsilk: #fef7e0ff;
 }
 
-div.item:nth-child(odd) {
-    background-color: var(--dark-green2);
+li:nth-child(odd) {
+    background-color: var(--dark-green2); 
 }
 
-div.item {
+li {
     border-radius: .25em;
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-}
-
-.item {
     padding: .25em 0em;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
+    list-style: none;
+    margin: 0;
     gap: 1em;
 }
 
-/* div.index {
-    flex-grow: 1;
-} */
+ol {
+  padding-left: 0;
+}
 
-div.content {
-    flex-grow: 2;
+#title {
+  font-weight: bold;
+}
+
+#extra {
+  font-size: small;
 }
 
 a {
     color: var(--cadet-gray);
     text-decoration: none;
-    padding: 0.25em;
+    /* padding: 0.25em; */
+}
+
+a.upvote::before {
+  content: "\25b2";
+}
+
+li > p {
+  padding-left: 0.5em;
 }
 
 a:visited {

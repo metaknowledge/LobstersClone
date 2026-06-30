@@ -2,6 +2,7 @@ use api::utils::build_oauth_client;
 use api::posts::PostsApi;
 use api::users::UsersApi;
 use api::sessions::AuthApi;
+use api::comments::CommentsApi;
 use poem::{listener::TcpListener, middleware::AddData, session::{CookieConfig, CookieSession}, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 use sqlx::{postgres::PgPool, Pool, Postgres};
@@ -9,6 +10,7 @@ use ui::UiApi;
 use std::env;
 mod api;
 mod ui;
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,7 +37,7 @@ async fn start_server(port: String, pool: Pool<Postgres>) -> Result<(), Box<dyn 
     let client_id = env::var("CLIENT_ID").unwrap();
     let client_secret = env::var("CLIENT_SECRET").unwrap();
     println!("client_id: {}, client_secret: {}", client_id, client_secret);
-    let api_service = OpenApiService::new((PostsApi, UsersApi, AuthApi, UiApi), "Hello World", "1.0")
+    let api_service = OpenApiService::new((PostsApi, UsersApi, CommentsApi, AuthApi, UiApi), "Hello World", "1.0")
         .server(format!("http://3.129.66.167/"));
     let api_service_docs = api_service.swagger_ui();
     let app = Route::new()

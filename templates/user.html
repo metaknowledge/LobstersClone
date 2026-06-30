@@ -6,12 +6,14 @@
 
 
 {% if editable %}
-<form hx-post="/api/post" hx-ext="json-enc" hx-vals='{"username": "{{username}}"}'>
+<h2> Make new post </h2>
+<form hx-post="/api/post" hx-ext="json-enc" hx-vals='{"username": "{{username}}"}' style="display: flex; flex-direction:column; margin-bottom: 3em;">
   <input type="text" name="title" value="title">
-  <input type="text" name="content" value="content">
+  <textarea type="text" name="content" rows="2" cols ="50">content</textarea>
   <input type="submit" value="Submit">
 </form>
 {% endif %}
+<h2> Posts </h2>
 <div class="container">
     <div hx-get='/api/user/posts/{{username}}' hx-trigger="revealed" hx-swap="outerHTML"></div>
 </div>

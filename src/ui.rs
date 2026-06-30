@@ -10,6 +10,7 @@ use poem::web::Data;
 use crate::api::posts::{self, Post};
 use crate::api::utils::ApiAuthResponse;
 use crate::api::users::{self, User};
+use crate::api::comments;
 use std::env;
 
 
@@ -19,8 +20,9 @@ struct HomeTemplate;
 
 #[derive(Template)]
 #[template(path = "focus_post.html")]
-struct PostTemplate {
-    pub post: Post
+struct FocusPostTemplate {
+    pub post: Post,
+    pub comments: Vec<comments::Comment>
 }
 
 #[derive(Template)]
@@ -71,7 +73,9 @@ impl UiApi {
         pool: Data<&Pool<Postgres>>,
     ) -> Html<String> { 
         let post = posts::read_from_id(id, &pool).await.unwrap();        
-        let html: String = PostTemplate{post: post}.render().map_err(poem::error::InternalServerError).unwrap();
+        let comments: Vec<comments::Comment> = comments::get_post_comments(id, &pool).await.unwrap();
+ 
+        let html: String = FocusPostTemplate{post: post, comments: comments}.render().map_err(poem::error::InternalServerError).unwrap();
         Html(html)
     }
 

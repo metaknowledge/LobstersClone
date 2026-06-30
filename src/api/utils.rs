@@ -1,13 +1,7 @@
-
 use poem::session::Session;
-
 use poem_openapi::ApiResponse;
-
 use sqlx::{Pool, Postgres};
 use poem_openapi::payload::Html;
-
-
-
 use oauth2::{
     AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl
 };
